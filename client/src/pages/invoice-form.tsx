@@ -42,7 +42,7 @@ export default function InvoiceForm() {
   const [status, setStatus] = useState("draft");
   const [issueDate, setIssueDate] = useState(formatDateForInput(new Date()));
   const [dueDate, setDueDate] = useState(formatDateForInput(new Date(Date.now() + 30 * 86400000)));
-  const [lineItems, setLineItems] = useState<LineItem[]>([{ description: "", quantity: 1, rate: 0 }]);
+  const [lineItems, setLineItems] = useState<LineItem[]>([{ name: "", description: "", quantity: 1, rate: 0 }]);
   const [taxRate, setTaxRate] = useState(20);
   const [notes, setNotes] = useState("");
   const [fromName, setFromName] = useState("");
@@ -72,7 +72,7 @@ export default function InvoiceForm() {
   const total = subtotal + taxAmount;
 
   const addLineItem = () => {
-    setLineItems([...lineItems, { description: "", quantity: 1, rate: 0 }]);
+    setLineItems([...lineItems, { name: "", description: "", quantity: 1, rate: 0 }]);
   };
 
   const removeLineItem = (index: number) => {
@@ -83,8 +83,8 @@ export default function InvoiceForm() {
 
   const updateLineItem = (index: number, field: keyof LineItem, value: string | number) => {
     const updated = [...lineItems];
-    if (field === "description") {
-      updated[index] = { ...updated[index], description: value as string };
+    if (field === "description" || field === "name") {
+      updated[index] = { ...updated[index], [field]: value as string };
     } else {
       updated[index] = { ...updated[index], [field]: Number(value) || 0 };
     }
@@ -232,56 +232,80 @@ export default function InvoiceForm() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base font-medium">Line Items</CardTitle>
+                <CardTitle className="text-base font-medium">Products & Services</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="hidden sm:grid grid-cols-[1fr_100px_120px_40px] gap-3 text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
-                  <span>Description</span>
-                  <span>Qty</span>
-                  <span>Rate</span>
-                  <span></span>
-                </div>
+              <CardContent className="space-y-4">
                 {lineItems.map((item, index) => (
-                  <div key={index} className="grid grid-cols-1 sm:grid-cols-[1fr_100px_120px_40px] gap-3 items-start">
-                    <Input
-                      placeholder="Item description"
-                      value={item.description}
-                      onChange={e => updateLineItem(index, "description", e.target.value)}
-                      data-testid={`input-line-desc-${index}`}
-                    />
-                    <Input
-                      type="number"
-                      min="0"
-                      step="1"
-                      placeholder="Qty"
-                      value={item.quantity || ""}
-                      onChange={e => updateLineItem(index, "quantity", e.target.value)}
-                      data-testid={`input-line-qty-${index}`}
-                    />
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="Rate"
-                      value={item.rate || ""}
-                      onChange={e => updateLineItem(index, "rate", e.target.value)}
-                      data-testid={`input-line-rate-${index}`}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeLineItem(index)}
-                      disabled={lineItems.length <= 1}
-                      data-testid={`button-remove-line-${index}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  <div key={index} className="border-2 border-border rounded-lg p-4 space-y-3 relative" data-testid={`card-line-item-${index}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Item {index + 1}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => removeLineItem(index)}
+                        disabled={lineItems.length <= 1}
+                        data-testid={`button-remove-line-${index}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Product / Service Name</Label>
+                      <Input
+                        placeholder="e.g. Website Design, Consultation, Logo Package"
+                        value={item.name || ""}
+                        onChange={e => updateLineItem(index, "name", e.target.value)}
+                        data-testid={`input-line-name-${index}`}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Description</Label>
+                      <Input
+                        placeholder="Additional details about this item"
+                        value={item.description}
+                        onChange={e => updateLineItem(index, "description", e.target.value)}
+                        data-testid={`input-line-desc-${index}`}
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Quantity</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="1"
+                          value={item.quantity || ""}
+                          onChange={e => updateLineItem(index, "quantity", e.target.value)}
+                          data-testid={`input-line-qty-${index}`}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Unit Cost ({currency === "GBP" ? "£" : currency === "EUR" ? "€" : "$"})</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={item.rate || ""}
+                          onChange={e => updateLineItem(index, "rate", e.target.value)}
+                          data-testid={`input-line-rate-${index}`}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Amount</Label>
+                        <div className="h-9 px-3 flex items-center rounded-md bg-muted text-sm font-medium tabular-nums" data-testid={`text-line-amount-${index}`}>
+                          {formatCurrency(item.quantity * item.rate, currency)}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
-                <Button type="button" variant="outline" size="sm" onClick={addLineItem} className="mt-2" data-testid="button-add-line">
+                <Button type="button" variant="outline" size="sm" onClick={addLineItem} className="w-full" data-testid="button-add-line">
                   <Plus className="w-4 h-4 mr-2" />
-                  Add Line Item
+                  Add Product or Service
                 </Button>
               </CardContent>
             </Card>

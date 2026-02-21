@@ -18,6 +18,7 @@ export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
 
 export const lineItemSchema = z.object({
+  name: z.string().optional().default(""),
   description: z.string(),
   quantity: z.number().min(0),
   rate: z.number().min(0),
@@ -72,6 +73,7 @@ export const settings = pgTable("settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   logoUrl: text("logo_url"),
   businessName: text("business_name"),
+  businessEmail: text("business_email"),
   vatNumber: text("vat_number"),
   bankName: text("bank_name"),
   accountName: text("account_name"),

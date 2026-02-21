@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [businessName, setBusinessName] = useState("");
+  const [businessEmail, setBusinessEmail] = useState("");
   const [vatNumber, setVatNumber] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -27,6 +28,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (settings) {
       setBusinessName(settings.businessName || "");
+      setBusinessEmail(settings.businessEmail || "");
       setVatNumber(settings.vatNumber || "");
       setBankName(settings.bankName || "");
       setAccountName(settings.accountName || "");
@@ -99,6 +101,7 @@ export default function SettingsPage() {
     e.preventDefault();
     updateSettingsMutation.mutate({
       businessName: businessName || null,
+      businessEmail: businessEmail || null,
       vatNumber: vatNumber || null,
       bankName: bankName || null,
       accountName: accountName || null,
@@ -191,6 +194,18 @@ export default function SettingsPage() {
                 data-testid="input-business-name"
               />
               <p className="text-xs text-muted-foreground">Appears in the sidebar and on your invoices</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="businessEmail">Business Email</Label>
+              <Input
+                id="businessEmail"
+                type="email"
+                value={businessEmail}
+                onChange={e => setBusinessEmail(e.target.value)}
+                placeholder="invoices@yourbusiness.com"
+                data-testid="input-business-email"
+              />
+              <p className="text-xs text-muted-foreground">A copy of sent invoices will be emailed to this address</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="vatNumber">VAT Number</Label>

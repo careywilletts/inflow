@@ -184,16 +184,23 @@ export default function InvoiceDetail() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Description</TableHead>
+                    <TableHead>Product / Service</TableHead>
                     <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Rate</TableHead>
+                    <TableHead className="text-right">Unit Cost</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {lineItems.map((item, i) => (
                     <TableRow key={i}>
-                      <TableCell>{item.description || "Untitled item"}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{item.name || item.description || "Untitled item"}</p>
+                          {item.name && item.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatCurrency(Number(item.rate), invoice.currency)}
