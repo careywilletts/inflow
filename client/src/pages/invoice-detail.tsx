@@ -128,11 +128,35 @@ export default function InvoiceDetail() {
         <div className="lg:col-span-2">
           <Card>
             <CardContent className="p-6">
-              {orgSettings?.logoUrl && (
-                <div className="mb-6">
-                  <img src={orgSettings.logoUrl} alt="Business logo" className="h-10 object-contain" data-testid="img-invoice-logo" />
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  {orgSettings?.logoUrl ? (
+                    <img
+                      src={orgSettings.logoUrl}
+                      alt="Business logo"
+                      className="h-12 w-12 rounded-full object-contain border-2 border-primary/30 bg-card"
+                      data-testid="img-invoice-logo"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center border-2 border-primary/30">
+                      <span className="text-base font-bold text-secondary-foreground tracking-tight">IN</span>
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-bold text-lg tracking-tight" data-testid="text-invoice-business-name">
+                      {orgSettings?.businessName || "Inflo"}
+                    </p>
+                    {orgSettings?.vatNumber && (
+                      <p className="text-xs text-muted-foreground">VAT: {orgSettings.vatNumber}</p>
+                    )}
+                  </div>
                 </div>
-              )}
+                <div className="text-right">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Invoice</p>
+                  <p className="text-lg font-bold tracking-tight">{invoice.invoiceNumber}</p>
+                </div>
+              </div>
+              <Separator className="mb-6" />
               <div className="grid grid-cols-2 gap-6 mb-6">
                 <div>
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">From</p>

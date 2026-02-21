@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
 import { FileText, Users, Clock, PoundSterling, Plus, ArrowRight, TrendingUp } from "lucide-react";
-import type { Invoice, Client, Schedule } from "@shared/schema";
+import type { Invoice, Client, Schedule, Settings } from "@shared/schema";
 import { format } from "date-fns";
 
 function formatCurrency(amount: number, currency: string = "GBP"): string {
@@ -57,6 +57,9 @@ export default function Dashboard() {
   const { data: schedulesData, isLoading: loadingSchedules } = useQuery<Schedule[]>({
     queryKey: ["/api/schedules"],
   });
+  const { data: orgSettings } = useQuery<Settings>({
+    queryKey: ["/api/settings"],
+  });
 
   const totalRevenue = invoices?.filter(i => i.status === "paid").reduce((sum, i) => sum + Number(i.total), 0) ?? 0;
   const pendingAmount = invoices?.filter(i => i.status === "sent").reduce((sum, i) => sum + Number(i.total), 0) ?? 0;
@@ -67,9 +70,25 @@ export default function Dashboard() {
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-dashboard-title">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">Your invoice overview at a glance</p>
+        <div className="flex items-center gap-4">
+          {orgSettings?.logoUrl ? (
+            <img
+              src={orgSettings.logoUrl}
+              alt="Business logo"
+              className="w-12 h-12 rounded-full object-contain border-2 border-primary/30 bg-card"
+              data-testid="img-dashboard-logo"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center border-2 border-primary/30">
+              <span className="text-base font-bold text-secondary-foreground tracking-tight">IN</span>
+            </div>
+          )}
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-dashboard-title">
+              {orgSettings?.businessName || "Dashboard"}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Your invoice overview at a glance</p>
+          </div>
         </div>
         <Link href="/invoices/new">
           <Button data-testid="button-create-invoice">
