@@ -12,6 +12,11 @@ import { format } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+function formatCurrency(amount: number, currency: string = "GBP"): string {
+  const locale = currency === "GBP" ? "en-GB" : currency === "EUR" ? "de-DE" : "en-US";
+  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
+}
+
 export default function InvoiceDetail() {
   const params = useParams<{ id: string }>();
   const [, navigate] = useLocation();
@@ -167,10 +172,10 @@ export default function InvoiceDetail() {
                       <TableCell>{item.description || "Untitled item"}</TableCell>
                       <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
                       <TableCell className="text-right tabular-nums">
-                        ${Number(item.rate).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        {formatCurrency(Number(item.rate), invoice.currency)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-medium">
-                        ${(item.quantity * item.rate).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        {formatCurrency(item.quantity * item.rate, invoice.currency)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -183,19 +188,19 @@ export default function InvoiceDetail() {
                 <div className="w-64 space-y-2 text-sm">
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="tabular-nums">${Number(invoice.subtotal).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                    <span className="tabular-nums">{formatCurrency(Number(invoice.subtotal), invoice.currency)}</span>
                   </div>
                   {Number(invoice.taxRate) > 0 && (
                     <div className="flex justify-between gap-2">
-                      <span className="text-muted-foreground">Tax ({invoice.taxRate}%)</span>
-                      <span className="tabular-nums">${Number(invoice.taxAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                      <span className="text-muted-foreground">VAT ({invoice.taxRate}%)</span>
+                      <span className="tabular-nums">{formatCurrency(Number(invoice.taxAmount), invoice.currency)}</span>
                     </div>
                   )}
                   <Separator />
                   <div className="flex justify-between gap-2 text-base font-semibold">
                     <span>Total ({invoice.currency})</span>
                     <span className="tabular-nums" data-testid="text-invoice-total">
-                      ${Number(invoice.total).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      {formatCurrency(Number(invoice.total), invoice.currency)}
                     </span>
                   </div>
                 </div>

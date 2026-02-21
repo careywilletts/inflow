@@ -15,6 +15,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
+function formatCurrency(amount: number, currency: string = "GBP"): string {
+  const locale = currency === "GBP" ? "en-GB" : currency === "EUR" ? "de-DE" : "en-US";
+  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
+}
+
 function formatDateForInput(date: Date | string) {
   const d = new Date(date);
   return format(d, "yyyy-MM-dd");
@@ -38,12 +43,12 @@ export default function InvoiceForm() {
   const [issueDate, setIssueDate] = useState(formatDateForInput(new Date()));
   const [dueDate, setDueDate] = useState(formatDateForInput(new Date(Date.now() + 30 * 86400000)));
   const [lineItems, setLineItems] = useState<LineItem[]>([{ description: "", quantity: 1, rate: 0 }]);
-  const [taxRate, setTaxRate] = useState(0);
+  const [taxRate, setTaxRate] = useState(20);
   const [notes, setNotes] = useState("");
   const [fromName, setFromName] = useState("");
   const [fromEmail, setFromEmail] = useState("");
   const [fromAddress, setFromAddress] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("GBP");
 
   useEffect(() => {
     if (existingInvoice) {
@@ -330,15 +335,15 @@ export default function InvoiceForm() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="GBP">GBP (£)</SelectItem>
                       <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                      <SelectItem value="GBP">GBP</SelectItem>
-                      <SelectItem value="CAD">CAD</SelectItem>
+                      <SelectItem value="EUR">EUR (€)</SelectItem>
+                      <SelectItem value="CAD">CAD ($)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                  <Label htmlFor="taxRate">VAT Rate (%)</Label>
                   <Input
                     id="taxRate"
                     type="number"
@@ -355,14 +360,14 @@ export default function InvoiceForm() {
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="font-medium tabular-nums" data-testid="text-subtotal">
-                      ${subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      {formatCurrency(subtotal, currency)}
                     </span>
                   </div>
                   {taxRate > 0 && (
                     <div className="flex justify-between gap-2">
-                      <span className="text-muted-foreground">Tax ({taxRate}%)</span>
+                      <span className="text-muted-foreground">VAT ({taxRate}%)</span>
                       <span className="font-medium tabular-nums" data-testid="text-tax">
-                        ${taxAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        {formatCurrency(taxAmount, currency)}
                       </span>
                     </div>
                   )}
@@ -370,7 +375,7 @@ export default function InvoiceForm() {
                   <div className="flex justify-between gap-2 text-base">
                     <span className="font-semibold">Total</span>
                     <span className="font-semibold tabular-nums" data-testid="text-total">
-                      ${total.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      {formatCurrency(total, currency)}
                     </span>
                   </div>
                 </div>

@@ -40,7 +40,7 @@ export const invoices = pgTable("invoices", {
   fromName: text("from_name"),
   fromEmail: text("from_email"),
   fromAddress: text("from_address"),
-  currency: text("currency").notNull().default("USD"),
+  currency: text("currency").notNull().default("GBP"),
 });
 
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true }).extend({

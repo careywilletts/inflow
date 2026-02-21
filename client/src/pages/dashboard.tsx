@@ -4,9 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
-import { FileText, Users, Clock, DollarSign, Plus, ArrowRight, TrendingUp } from "lucide-react";
+import { FileText, Users, Clock, PoundSterling, Plus, ArrowRight, TrendingUp } from "lucide-react";
 import type { Invoice, Client, Schedule } from "@shared/schema";
 import { format } from "date-fns";
+
+function formatCurrency(amount: number, currency: string = "GBP"): string {
+  const locale = currency === "GBP" ? "en-GB" : currency === "EUR" ? "de-DE" : "en-US";
+  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
+}
 
 function StatCard({ title, value, icon: Icon, description, loading }: {
   title: string;
@@ -74,14 +79,14 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Revenue"
-          value={`$${totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
-          icon={DollarSign}
+          value={formatCurrency(totalRevenue)}
+          icon={PoundSterling}
           description="From paid invoices"
           loading={loading}
         />
         <StatCard
           title="Pending"
-          value={`$${pendingAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
+          value={formatCurrency(pendingAmount)}
           icon={TrendingUp}
           description="Awaiting payment"
           loading={loading}
@@ -147,7 +152,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-3 shrink-0">
                         <StatusBadge status={invoice.status} />
                         <span className="text-sm font-medium tabular-nums">
-                          ${Number(invoice.total).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                          {formatCurrency(Number(invoice.total), invoice.currency)}
                         </span>
                       </div>
                     </div>

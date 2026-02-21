@@ -12,6 +12,11 @@ import type { Invoice, Client } from "@shared/schema";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
 
+function formatCurrency(amount: number, currency: string = "GBP"): string {
+  const locale = currency === "GBP" ? "en-GB" : currency === "EUR" ? "de-DE" : "en-US";
+  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
+}
+
 export default function Invoices() {
   const { data: invoices, isLoading } = useQuery<Invoice[]>({ queryKey: ["/api/invoices"] });
   const { data: clients } = useQuery<Client[]>({ queryKey: ["/api/clients"] });
@@ -134,7 +139,7 @@ export default function Invoices() {
                         {format(new Date(invoice.dueDate), "MMM d, yyyy")}
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
-                        ${Number(invoice.total).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        {formatCurrency(Number(invoice.total), invoice.currency)}
                       </TableCell>
                     </TableRow>
                   );
