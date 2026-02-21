@@ -13,30 +13,33 @@ function formatCurrency(amount: number, currency: string = "GBP"): string {
   return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
 }
 
-function StatCard({ title, value, icon: Icon, description, loading }: {
+function StatCard({ title, value, icon: Icon, description, loading, accent }: {
   title: string;
   value: string;
   icon: any;
   description?: string;
   loading?: boolean;
+  accent?: "green" | "pink";
 }) {
+  const iconBg = accent === "pink" ? "bg-secondary" : "bg-primary/15";
+  const iconColor = accent === "pink" ? "text-secondary-foreground" : "text-primary";
   return (
-    <Card className="hover-elevate">
+    <Card className="hover-elevate border-2">
       <CardContent className="p-5">
         <div className="flex items-center justify-between gap-2">
           <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">{title}</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{title}</p>
             {loading ? (
               <Skeleton className="h-8 w-24" />
             ) : (
-              <p className="text-2xl font-semibold tracking-tight">{value}</p>
+              <p className="text-2xl font-bold tracking-tight">{value}</p>
             )}
             {description && (
               <p className="text-xs text-muted-foreground">{description}</p>
             )}
           </div>
-          <div className="rounded-md bg-primary/10 p-2.5">
-            <Icon className="w-5 h-5 text-primary" />
+          <div className={`rounded-full ${iconBg} p-3`}>
+            <Icon className={`w-5 h-5 ${iconColor}`} />
           </div>
         </div>
       </CardContent>
@@ -83,6 +86,7 @@ export default function Dashboard() {
           icon={PoundSterling}
           description="From paid invoices"
           loading={loading}
+          accent="green"
         />
         <StatCard
           title="Pending"
@@ -90,6 +94,7 @@ export default function Dashboard() {
           icon={TrendingUp}
           description="Awaiting payment"
           loading={loading}
+          accent="pink"
         />
         <StatCard
           title="Total Clients"
@@ -97,6 +102,7 @@ export default function Dashboard() {
           icon={Users}
           description="Active clients"
           loading={loading}
+          accent="green"
         />
         <StatCard
           title="Active Schedules"
@@ -104,6 +110,7 @@ export default function Dashboard() {
           icon={Clock}
           description="Automated invoices"
           loading={loading}
+          accent="pink"
         />
       </div>
 

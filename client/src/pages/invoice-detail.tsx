@@ -215,6 +215,31 @@ export default function InvoiceDetail() {
                   </div>
                 </>
               )}
+
+              {(orgSettings?.vatNumber || orgSettings?.bankName || orgSettings?.sortCode) && (
+                <>
+                  <Separator className="my-5" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {orgSettings?.vatNumber && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">VAT Number</p>
+                        <p className="text-sm font-medium" data-testid="text-vat-number">{orgSettings.vatNumber}</p>
+                      </div>
+                    )}
+                    {(orgSettings?.bankName || orgSettings?.sortCode) && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Bank Details</p>
+                        <div className="text-sm space-y-0.5" data-testid="text-bank-details">
+                          {orgSettings.bankName && <p className="font-medium">{orgSettings.bankName}</p>}
+                          {orgSettings.accountName && <p className="text-muted-foreground">{orgSettings.accountName}</p>}
+                          {orgSettings.sortCode && <p className="text-muted-foreground">Sort Code: {orgSettings.sortCode}</p>}
+                          {orgSettings.accountNumber && <p className="text-muted-foreground">Account: {orgSettings.accountNumber}</p>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

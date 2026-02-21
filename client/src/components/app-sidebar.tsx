@@ -45,12 +45,12 @@ export function AppSidebar() {
               <img
                 src={settings.logoUrl}
                 alt="Logo"
-                className="w-8 h-8 rounded-md object-contain"
+                className="w-9 h-9 rounded-full object-contain border-2 border-primary/30"
                 data-testid="img-sidebar-logo"
               />
             ) : (
-              <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-                <span className="text-sm font-bold text-primary-foreground tracking-tight">IN</span>
+              <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center border-2 border-primary/30">
+                <span className="text-sm font-bold text-secondary-foreground tracking-tight">IN</span>
               </div>
             )}
             <span className="text-lg font-bold tracking-tight uppercase">

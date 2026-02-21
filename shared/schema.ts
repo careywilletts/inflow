@@ -72,6 +72,11 @@ export const settings = pgTable("settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   logoUrl: text("logo_url"),
   businessName: text("business_name"),
+  vatNumber: text("vat_number"),
+  bankName: text("bank_name"),
+  accountName: text("account_name"),
+  sortCode: text("sort_code"),
+  accountNumber: text("account_number"),
 });
 
 export const insertSettingsSchema = createInsertSchema(settings).omit({ id: true });

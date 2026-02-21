@@ -8,31 +8,36 @@ import { Upload, Trash2, Save, ImageIcon } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-
-interface OrgSettings {
-  id: string | null;
-  logoUrl: string | null;
-  businessName: string | null;
-}
+import type { Settings } from "@shared/schema";
 
 export default function SettingsPage() {
-  const { data: settings, isLoading } = useQuery<OrgSettings>({
+  const { data: settings, isLoading } = useQuery<Settings>({
     queryKey: ["/api/settings"],
   });
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [businessName, setBusinessName] = useState("");
+  const [vatNumber, setVatNumber] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [sortCode, setSortCode] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    if (settings?.businessName) {
-      setBusinessName(settings.businessName);
+    if (settings) {
+      setBusinessName(settings.businessName || "");
+      setVatNumber(settings.vatNumber || "");
+      setBankName(settings.bankName || "");
+      setAccountName(settings.accountName || "");
+      setSortCode(settings.sortCode || "");
+      setAccountNumber(settings.accountNumber || "");
     }
   }, [settings]);
 
-  const updateNameMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const res = await apiRequest("PUT", "/api/settings", { businessName: name });
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (data: Record<string, string | null>) => {
+      const res = await apiRequest("PUT", "/api/settings", data);
       return res.json();
     },
     onSuccess: () => {
@@ -90,9 +95,16 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveName = (e: React.FormEvent) => {
+  const handleSaveAll = (e: React.FormEvent) => {
     e.preventDefault();
-    updateNameMutation.mutate(businessName);
+    updateSettingsMutation.mutate({
+      businessName: businessName || null,
+      vatNumber: vatNumber || null,
+      bankName: bankName || null,
+      accountName: accountName || null,
+      sortCode: sortCode || null,
+      accountNumber: accountNumber || null,
+    });
   };
 
   return (
@@ -163,14 +175,14 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-medium">Business Name</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSaveName} className="space-y-4">
+      <form onSubmit={handleSaveAll} className="space-y-5">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium">Business Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="businessName">Name</Label>
+              <Label htmlFor="businessName">Business Name</Label>
               <Input
                 id="businessName"
                 value={businessName}
@@ -178,15 +190,78 @@ export default function SettingsPage() {
                 placeholder="Your business name"
                 data-testid="input-business-name"
               />
-              <p className="text-xs text-muted-foreground">This appears in the sidebar and on your invoices</p>
+              <p className="text-xs text-muted-foreground">Appears in the sidebar and on your invoices</p>
             </div>
-            <Button type="submit" size="sm" disabled={updateNameMutation.isPending} data-testid="button-save-settings">
-              <Save className="w-4 h-4 mr-2" />
-              {updateNameMutation.isPending ? "Saving..." : "Save"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            <div className="space-y-2">
+              <Label htmlFor="vatNumber">VAT Number</Label>
+              <Input
+                id="vatNumber"
+                value={vatNumber}
+                onChange={e => setVatNumber(e.target.value)}
+                placeholder="e.g. GB 123 4567 89"
+                data-testid="input-vat-number"
+              />
+              <p className="text-xs text-muted-foreground">Displayed at the bottom of your invoices</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium">Bank Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">These details appear at the bottom of your invoices so clients know where to send payment.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="bankName">Bank Name</Label>
+                <Input
+                  id="bankName"
+                  value={bankName}
+                  onChange={e => setBankName(e.target.value)}
+                  placeholder="e.g. Barclays"
+                  data-testid="input-bank-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="accountName">Account Name</Label>
+                <Input
+                  id="accountName"
+                  value={accountName}
+                  onChange={e => setAccountName(e.target.value)}
+                  placeholder="e.g. Inflo Studio Ltd"
+                  data-testid="input-account-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sortCode">Sort Code</Label>
+                <Input
+                  id="sortCode"
+                  value={sortCode}
+                  onChange={e => setSortCode(e.target.value)}
+                  placeholder="e.g. 20-45-67"
+                  data-testid="input-sort-code"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="accountNumber">Account Number</Label>
+                <Input
+                  id="accountNumber"
+                  value={accountNumber}
+                  onChange={e => setAccountNumber(e.target.value)}
+                  placeholder="e.g. 12345678"
+                  data-testid="input-account-number"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Button type="submit" className="w-full" disabled={updateSettingsMutation.isPending} data-testid="button-save-settings">
+          <Save className="w-4 h-4 mr-2" />
+          {updateSettingsMutation.isPending ? "Saving..." : "Save All Settings"}
+        </Button>
+      </form>
     </div>
   );
 }
