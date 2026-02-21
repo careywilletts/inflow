@@ -1,5 +1,6 @@
 import { useLocation, Link } from "wouter";
-import { FileText, Users, Clock, LayoutDashboard, Plus } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { FileText, Users, Clock, LayoutDashboard, Plus, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -20,27 +21,48 @@ const navItems = [
   { title: "Invoices", url: "/invoices", icon: FileText },
   { title: "Clients", url: "/clients", icon: Users },
   { title: "Schedules", url: "/schedules", icon: Clock },
+  { title: "Settings", url: "/settings", icon: Settings },
 ];
+
+interface OrgSettings {
+  id: string;
+  logoUrl: string | null;
+  businessName: string | null;
+}
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { data: settings } = useQuery<OrgSettings>({
+    queryKey: ["/api/settings"],
+  });
 
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
         <Link href="/">
-          <div className="flex items-center gap-2 cursor-pointer" data-testid="link-logo">
-            <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-              <FileText className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-semibold tracking-tight">Inflo</span>
+          <div className="flex items-center gap-3 cursor-pointer" data-testid="link-logo">
+            {settings?.logoUrl ? (
+              <img
+                src={settings.logoUrl}
+                alt="Logo"
+                className="w-8 h-8 rounded-md object-contain"
+                data-testid="img-sidebar-logo"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
+                <span className="text-sm font-bold text-primary-foreground tracking-tight">IN</span>
+              </div>
+            )}
+            <span className="text-lg font-bold tracking-tight uppercase">
+              {settings?.businessName || "Inflo"}
+            </span>
           </div>
         </Link>
       </SidebarHeader>
       <Separator />
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
+          <SidebarGroupLabel className="uppercase text-[10px] tracking-widest font-semibold">Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
@@ -50,7 +72,7 @@ export function AppSidebar() {
                     <SidebarMenuButton asChild data-active={isActive}>
                       <Link href={item.url} data-testid={`link-nav-${item.title.toLowerCase()}`}>
                         <item.icon className="w-4 h-4" />
-                        <span>{item.title}</span>
+                        <span className="font-medium">{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -60,10 +82,10 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Quick Actions</SidebarGroupLabel>
+          <SidebarGroupLabel className="uppercase text-[10px] tracking-widest font-semibold">Quick Actions</SidebarGroupLabel>
           <SidebarGroupContent className="px-2">
             <Link href="/invoices/new">
-              <Button className="w-full justify-start gap-2" size="sm" data-testid="button-new-invoice-sidebar">
+              <Button className="w-full justify-start gap-2 font-semibold" size="sm" data-testid="button-new-invoice-sidebar">
                 <Plus className="w-4 h-4" />
                 New Invoice
               </Button>
@@ -72,7 +94,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4">
-        <p className="text-xs text-muted-foreground text-center">Inflo v1.0</p>
+        <p className="text-[10px] text-muted-foreground text-center uppercase tracking-widest font-medium">Inflo v1.0</p>
       </SidebarFooter>
     </Sidebar>
   );

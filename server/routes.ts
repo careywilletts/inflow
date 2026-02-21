@@ -1,14 +1,45 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertClientSchema, insertInvoiceSchema, insertScheduleSchema } from "@shared/schema";
+import { insertClientSchema, insertInvoiceSchema, insertScheduleSchema, insertSettingsSchema } from "@shared/schema";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import express from "express";
+import crypto from "crypto";
+
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      const name = crypto.randomBytes(16).toString("hex");
+      cb(null, `${name}${ext}`);
+    },
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/png", "image/jpeg", "image/webp"];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PNG, JPEG, and WebP images are allowed"));
+    }
+  },
+});
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
 
-  // Clients
+  app.use("/uploads", express.static(uploadsDir));
+
   app.get("/api/clients", async (_req, res) => {
     const clients = await storage.getClients();
     res.json(clients);
@@ -38,7 +69,6 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
-  // Invoices
   app.get("/api/invoices", async (_req, res) => {
     const invs = await storage.getInvoices();
     res.json(invs);
@@ -68,7 +98,6 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
-  // Schedules
   app.get("/api/schedules", async (_req, res) => {
     const scheds = await storage.getSchedules();
     res.json(scheds);
@@ -96,6 +125,46 @@ export async function registerRoutes(
   app.delete("/api/schedules/:id", async (req, res) => {
     await storage.deleteSchedule(req.params.id);
     res.status(204).send();
+  });
+
+  app.get("/api/settings", async (_req, res) => {
+    const s = await storage.getSettings();
+    res.json(s || { id: null, logoUrl: null, businessName: null });
+  });
+
+  app.put("/api/settings", async (req, res) => {
+    const parsed = insertSettingsSchema.partial().safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    const s = await storage.upsertSettings(parsed.data);
+    res.json(s);
+  });
+
+  app.post("/api/settings/logo", (req, res, next) => {
+    upload.single("logo")(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ message: err.message });
+      }
+      next();
+    });
+  }, async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    const logoUrl = `/uploads/${req.file.filename}`;
+    const s = await storage.upsertSettings({ logoUrl });
+    res.json(s);
+  });
+
+  app.delete("/api/settings/logo", async (_req, res) => {
+    const existing = await storage.getSettings();
+    if (existing?.logoUrl) {
+      const filePath = path.join(uploadsDir, path.basename(existing.logoUrl));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+    const s = await storage.upsertSettings({ logoUrl: null });
+    res.json(s);
   });
 
   return httpServer;

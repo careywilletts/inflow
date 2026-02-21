@@ -13,6 +13,7 @@ import InvoiceForm from "@/pages/invoice-form";
 import InvoiceDetail from "@/pages/invoice-detail";
 import Clients from "@/pages/clients";
 import Schedules from "@/pages/schedules";
+import SettingsPage from "@/pages/settings";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/invoices/:id" component={InvoiceDetail} />
       <Route path="/clients" component={Clients} />
       <Route path="/schedules" component={Schedules} />
+      <Route path="/settings" component={SettingsPage} />
       <Route component={NotFound} />
     </Switch>
   );

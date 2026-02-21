@@ -2,7 +2,8 @@ import {
   type Client, type InsertClient,
   type Invoice, type InsertInvoice,
   type Schedule, type InsertSchedule,
-  clients, invoices, schedules
+  type Settings, type InsertSettings,
+  clients, invoices, schedules, settings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -25,6 +26,9 @@ export interface IStorage {
   createSchedule(data: InsertSchedule): Promise<Schedule>;
   updateSchedule(id: string, data: Partial<InsertSchedule>): Promise<Schedule | undefined>;
   deleteSchedule(id: string): Promise<void>;
+
+  getSettings(): Promise<Settings | undefined>;
+  upsertSettings(data: Partial<InsertSettings>): Promise<Settings>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -83,6 +87,21 @@ export class DatabaseStorage implements IStorage {
   }
   async deleteSchedule(id: string): Promise<void> {
     await db.delete(schedules).where(eq(schedules.id, id));
+  }
+
+  async getSettings(): Promise<Settings | undefined> {
+    const rows = await db.select().from(settings);
+    return rows[0];
+  }
+
+  async upsertSettings(data: Partial<InsertSettings>): Promise<Settings> {
+    const existing = await this.getSettings();
+    if (existing) {
+      const [updated] = await db.update(settings).set(data).where(eq(settings.id, existing.id)).returning();
+      return updated;
+    }
+    const [created] = await db.insert(settings).values(data as any).returning();
+    return created;
   }
 }
 

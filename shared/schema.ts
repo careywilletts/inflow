@@ -67,3 +67,13 @@ export const insertScheduleSchema = createInsertSchema(schedules).omit({ id: tru
 });
 export type InsertSchedule = z.infer<typeof insertScheduleSchema>;
 export type Schedule = typeof schedules.$inferSelect;
+
+export const settings = pgTable("settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  logoUrl: text("logo_url"),
+  businessName: text("business_name"),
+});
+
+export const insertSettingsSchema = createInsertSchema(settings).omit({ id: true });
+export type InsertSettings = z.infer<typeof insertSettingsSchema>;
+export type Settings = typeof settings.$inferSelect;

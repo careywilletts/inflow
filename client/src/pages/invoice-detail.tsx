@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/status-badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Edit, Send, CheckCircle, Printer } from "lucide-react";
-import type { Invoice, Client, LineItem } from "@shared/schema";
+import type { Invoice, Client, LineItem, Settings } from "@shared/schema";
 import { format } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +21,7 @@ export default function InvoiceDetail() {
     queryKey: ["/api/invoices", params.id],
   });
   const { data: clients } = useQuery<Client[]>({ queryKey: ["/api/clients"] });
+  const { data: orgSettings } = useQuery<Settings>({ queryKey: ["/api/settings"] });
 
   const client = invoice?.clientId ? clients?.find(c => c.id === invoice.clientId) : undefined;
 
@@ -122,6 +123,11 @@ export default function InvoiceDetail() {
         <div className="lg:col-span-2">
           <Card>
             <CardContent className="p-6">
+              {orgSettings?.logoUrl && (
+                <div className="mb-6">
+                  <img src={orgSettings.logoUrl} alt="Business logo" className="h-10 object-contain" data-testid="img-invoice-logo" />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-6 mb-6">
                 <div>
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">From</p>
