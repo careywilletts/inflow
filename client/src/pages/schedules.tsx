@@ -91,6 +91,7 @@ export default function Schedules() {
     switch (f) {
       case "weekly": return "Weekly";
       case "monthly": return "Monthly";
+      case "quarterly": return "Quarterly";
       case "yearly": return "Yearly";
       default: return f;
     }
@@ -150,6 +151,7 @@ export default function Schedules() {
                   <SelectContent>
                     <SelectItem value="weekly">Weekly</SelectItem>
                     <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
                     <SelectItem value="yearly">Yearly</SelectItem>
                   </SelectContent>
                 </Select>
