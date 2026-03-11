@@ -7,6 +7,7 @@ import path from "path";
 import fs from "fs";
 import express from "express";
 import crypto from "crypto";
+import { sendInvoiceEmail } from "./email";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -88,8 +89,25 @@ export async function registerRoutes(
   });
 
   app.patch("/api/invoices/:id", async (req, res) => {
+    const existing = await storage.getInvoice(req.params.id);
     const inv = await storage.updateInvoice(req.params.id, req.body);
     if (!inv) return res.status(404).json({ message: "Invoice not found" });
+
+    if (req.body.status === "sent" && existing?.status !== "sent") {
+      const [clients, settings] = await Promise.all([
+        storage.getClients(),
+        storage.getSettings(),
+      ]);
+      const client = inv.clientId ? clients.find(c => c.id === inv.clientId) : undefined;
+      sendInvoiceEmail(inv, client, settings).then(result => {
+        if (!result.success) {
+          console.error("[email] Invoice email failed:", result.error);
+        } else {
+          console.log(`[email] Invoice ${inv.invoiceNumber} emailed successfully`);
+        }
+      });
+    }
+
     res.json(inv);
   });
 

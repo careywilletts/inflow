@@ -51,9 +51,11 @@ Inflo is a business invoice management application that helps users design, crea
 - Sidebar navigation
 
 ## Email Integration
-- **Status**: NOT configured. User dismissed SendGrid integration (connector:ccfg_sendgrid_01K69QKAPBPJ4SWD8GQHGY03D5).
-- **Pending**: Email sending when invoice is marked "sent" (copy to client + business email). Requires user to either complete SendGrid authorization or provide API credentials for an alternative email service (SendGrid, Resend, etc.) as a secret.
-- **Business email field**: Added to settings schema and UI, ready for use once email integration is set up.
+- **Status**: CONFIGURED via Gmail SMTP (nodemailer)
+- **Secrets**: GMAIL_USER (brockleyfields@gmail.com), GMAIL_APP_PASSWORD stored in Replit Secrets
+- **Behaviour**: When an invoice is patched to status "sent", the server automatically emails the invoice to the client and BCCs the business email from Settings
+- **Template**: HTML email matching the app's risograph aesthetic — includes logo, line items, totals, bank details
+- **Module**: server/email.ts — buildInvoiceHtml() + sendInvoiceEmail()
 
 ## Running
 - `npm run dev` starts Express + Vite on port 5000
