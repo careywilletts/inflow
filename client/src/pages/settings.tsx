@@ -2,6 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Upload, Trash2, Save, ImageIcon } from "lucide-react";
@@ -18,6 +19,7 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [businessName, setBusinessName] = useState("");
   const [businessEmail, setBusinessEmail] = useState("");
+  const [businessAddress, setBusinessAddress] = useState("");
   const [ccEmail1, setCcEmail1] = useState("");
   const [ccEmail2, setCcEmail2] = useState("");
   const [vatNumber, setVatNumber] = useState("");
@@ -31,6 +33,7 @@ export default function SettingsPage() {
     if (settings) {
       setBusinessName(settings.businessName || "");
       setBusinessEmail(settings.businessEmail || "");
+      setBusinessAddress(settings.businessAddress || "");
       setCcEmail1(settings.ccEmail1 || "");
       setCcEmail2(settings.ccEmail2 || "");
       setVatNumber(settings.vatNumber || "");
@@ -106,6 +109,7 @@ export default function SettingsPage() {
     updateSettingsMutation.mutate({
       businessName: businessName || null,
       businessEmail: businessEmail || null,
+      businessAddress: businessAddress || null,
       ccEmail1: ccEmail1 || null,
       ccEmail2: ccEmail2 || null,
       vatNumber: vatNumber || null,
@@ -212,6 +216,18 @@ export default function SettingsPage() {
                 data-testid="input-business-email"
               />
               <p className="text-xs text-muted-foreground">A copy of every sent invoice goes to this address</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="businessAddress">Business Address</Label>
+              <Textarea
+                id="businessAddress"
+                value={businessAddress}
+                onChange={e => setBusinessAddress(e.target.value)}
+                placeholder={"123 Example Street\nLondon EC1A 1BB"}
+                rows={3}
+                data-testid="input-business-address"
+              />
+              <p className="text-xs text-muted-foreground">Appears on all new invoices in the From section</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="ccEmail1">CC Email 1 <span className="text-muted-foreground font-normal">(optional)</span></Label>

@@ -74,6 +74,7 @@ export const settings = pgTable("settings", {
   logoUrl: text("logo_url"),
   businessName: text("business_name"),
   businessEmail: text("business_email"),
+  businessAddress: text("business_address"),
   ccEmail1: text("cc_email_1"),
   ccEmail2: text("cc_email_2"),
   vatNumber: text("vat_number"),

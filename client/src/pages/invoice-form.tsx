@@ -72,6 +72,7 @@ export default function InvoiceForm() {
     if (!isEdit && settings) {
       if (settings.businessName) setFromName(settings.businessName);
       if (settings.businessEmail) setFromEmail(settings.businessEmail);
+      if (settings.businessAddress) setFromAddress(settings.businessAddress);
     }
   }, [isEdit, settings]);
 
