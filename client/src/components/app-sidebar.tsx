@@ -40,7 +40,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4">
         <Link href="/">
-          <div className="flex items-center gap-3 cursor-pointer" data-testid="link-logo">
+          <div className="flex items-center gap-3 cursor-pointer min-w-0" data-testid="link-logo">
             {settings?.logoUrl ? (
               <img
                 src={settings.logoUrl}
@@ -53,7 +53,7 @@ export function AppSidebar() {
                 <span className="text-sm font-bold text-secondary-foreground tracking-tight">IN</span>
               </div>
             )}
-            <span className="text-lg font-bold tracking-tight uppercase">
+            <span className="text-base font-bold tracking-tight uppercase leading-tight min-w-0 break-words">
               {settings?.businessName || "Inflo"}
             </span>
           </div>
