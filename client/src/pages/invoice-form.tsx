@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Trash2, ArrowLeft, Save } from "lucide-react";
-import type { Client, Invoice, LineItem } from "@shared/schema";
-import { useState, useEffect, useCallback } from "react";
+import type { Client, Invoice, LineItem, Settings } from "@shared/schema";
+import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -32,6 +32,7 @@ export default function InvoiceForm() {
   const { toast } = useToast();
 
   const { data: clients } = useQuery<Client[]>({ queryKey: ["/api/clients"] });
+  const { data: settings } = useQuery<Settings>({ queryKey: ["/api/settings"] });
   const { data: existingInvoice, isLoading: loadingInvoice } = useQuery<Invoice>({
     queryKey: ["/api/invoices", params.id],
     enabled: !!isEdit,
@@ -66,6 +67,13 @@ export default function InvoiceForm() {
       setCurrency(existingInvoice.currency);
     }
   }, [existingInvoice]);
+
+  useEffect(() => {
+    if (!isEdit && settings) {
+      if (settings.businessName) setFromName(settings.businessName);
+      if (settings.businessEmail) setFromEmail(settings.businessEmail);
+    }
+  }, [isEdit, settings]);
 
   const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.rate, 0);
   const taxAmount = subtotal * (taxRate / 100);
