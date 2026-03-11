@@ -147,7 +147,7 @@ export async function registerRoutes(
 
   app.get("/api/settings", async (_req, res) => {
     const s = await storage.getSettings();
-    res.json(s || { id: null, logoUrl: null, businessName: null, businessEmail: null, vatNumber: null, bankName: null, accountName: null, sortCode: null, accountNumber: null });
+    res.json(s || { id: null, logoUrl: null, businessName: null, businessEmail: null, ccEmail1: null, ccEmail2: null, vatNumber: null, bankName: null, accountName: null, sortCode: null, accountNumber: null });
   });
 
   app.put("/api/settings", async (req, res) => {

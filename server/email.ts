@@ -162,9 +162,13 @@ export async function sendInvoiceEmail(
 
   const businessName = settings?.businessName || invoice.fromName || "Inflo";
   const toEmail = client?.email;
-  const bccEmail = settings?.businessEmail;
+  const ccAddresses = [
+    settings?.businessEmail,
+    settings?.ccEmail1,
+    settings?.ccEmail2,
+  ].filter(Boolean) as string[];
 
-  if (!toEmail && !bccEmail) {
+  if (!toEmail && ccAddresses.length === 0) {
     return { success: false, error: "No recipient email address available" };
   }
 
@@ -174,8 +178,8 @@ export async function sendInvoiceEmail(
   try {
     await transporter.sendMail({
       from: `"${businessName}" <${process.env.GMAIL_USER}>`,
-      to: toEmail || bccEmail,
-      bcc: toEmail && bccEmail ? bccEmail : undefined,
+      to: toEmail || ccAddresses[0],
+      cc: ccAddresses.length > 0 ? ccAddresses.join(", ") : undefined,
       subject,
       html,
     });

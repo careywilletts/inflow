@@ -18,6 +18,8 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [businessName, setBusinessName] = useState("");
   const [businessEmail, setBusinessEmail] = useState("");
+  const [ccEmail1, setCcEmail1] = useState("");
+  const [ccEmail2, setCcEmail2] = useState("");
   const [vatNumber, setVatNumber] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -29,6 +31,8 @@ export default function SettingsPage() {
     if (settings) {
       setBusinessName(settings.businessName || "");
       setBusinessEmail(settings.businessEmail || "");
+      setCcEmail1(settings.ccEmail1 || "");
+      setCcEmail2(settings.ccEmail2 || "");
       setVatNumber(settings.vatNumber || "");
       setBankName(settings.bankName || "");
       setAccountName(settings.accountName || "");
@@ -102,6 +106,8 @@ export default function SettingsPage() {
     updateSettingsMutation.mutate({
       businessName: businessName || null,
       businessEmail: businessEmail || null,
+      ccEmail1: ccEmail1 || null,
+      ccEmail2: ccEmail2 || null,
       vatNumber: vatNumber || null,
       bankName: bankName || null,
       accountName: accountName || null,
@@ -205,7 +211,30 @@ export default function SettingsPage() {
                 placeholder="invoices@yourbusiness.com"
                 data-testid="input-business-email"
               />
-              <p className="text-xs text-muted-foreground">A copy of sent invoices will be emailed to this address</p>
+              <p className="text-xs text-muted-foreground">A copy of every sent invoice goes to this address</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ccEmail1">CC Email 1 <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Input
+                id="ccEmail1"
+                type="email"
+                value={ccEmail1}
+                onChange={e => setCcEmail1(e.target.value)}
+                placeholder="colleague@example.com"
+                data-testid="input-cc-email-1"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ccEmail2">CC Email 2 <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Input
+                id="ccEmail2"
+                type="email"
+                value={ccEmail2}
+                onChange={e => setCcEmail2(e.target.value)}
+                placeholder="accountant@example.com"
+                data-testid="input-cc-email-2"
+              />
+              <p className="text-xs text-muted-foreground">Up to 2 extra people will be CC'd on every sent invoice</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="vatNumber">VAT Number</Label>
