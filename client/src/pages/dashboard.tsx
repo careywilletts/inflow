@@ -1,12 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/status-badge";
-import { FileText, Users, Clock, PoundSterling, Plus, ArrowRight, TrendingUp } from "lucide-react";
+import { FileText, Users, Clock, PoundSterling, Plus, ArrowRight, TrendingUp, Trash2 } from "lucide-react";
 import type { Invoice, Client, Schedule, Settings } from "@shared/schema";
 import { format } from "date-fns";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 function formatCurrency(amount: number, currency: string = "GBP"): string {
   const locale = currency === "GBP" ? "en-GB" : currency === "EUR" ? "de-DE" : "en-US";
@@ -48,6 +51,7 @@ function StatCard({ title, value, icon: Icon, description, loading, accent }: {
 }
 
 export default function Dashboard() {
+  const { toast } = useToast();
   const { data: invoices, isLoading: loadingInvoices } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
   });
@@ -59,6 +63,29 @@ export default function Dashboard() {
   });
   const { data: orgSettings } = useQuery<Settings>({
     queryKey: ["/api/settings"],
+  });
+
+  const markPaidMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("PATCH", `/api/invoices/${id}`, { status: "paid" });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      toast({ title: "Invoice marked as paid" });
+    },
+    onError: () => toast({ title: "Failed to update invoice", variant: "destructive" } as any),
+  });
+
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/invoices/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      toast({ title: "Invoice removed" });
+    },
+    onError: () => toast({ title: "Failed to remove invoice", variant: "destructive" } as any),
   });
 
   const totalRevenue = invoices?.filter(i => i.status === "paid").reduce((sum, i) => sum + Number(i.total), 0) ?? 0;
@@ -162,27 +189,50 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-1">
                 {recentInvoices.map(invoice => (
-                  <Link key={invoice.id} href={`/invoices/${invoice.id}`}>
-                    <div className="flex items-center justify-between gap-2 p-3 rounded-md hover-elevate cursor-pointer" data-testid={`card-invoice-${invoice.id}`}>
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center shrink-0">
-                          <FileText className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{invoice.invoiceNumber}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(invoice.issueDate), "MMM d, yyyy")}
-                          </p>
-                        </div>
+                  <div
+                    key={invoice.id}
+                    className="flex items-center gap-2 p-3 rounded-md hover:bg-muted/40 group"
+                    data-testid={`card-invoice-${invoice.id}`}
+                  >
+                    <Checkbox
+                      checked={invoice.status === "paid"}
+                      disabled={invoice.status === "paid" || markPaidMutation.isPending}
+                      onCheckedChange={() => {
+                        if (invoice.status !== "paid") markPaidMutation.mutate(invoice.id);
+                      }}
+                      className="shrink-0"
+                      data-testid={`checkbox-paid-${invoice.id}`}
+                      title={invoice.status === "paid" ? "Paid" : "Mark as paid"}
+                    />
+                    <Link href={`/invoices/${invoice.id}`} className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4 text-muted-foreground" />
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <StatusBadge status={invoice.status} />
-                        <span className="text-sm font-medium tabular-nums">
-                          {formatCurrency(Number(invoice.total), invoice.currency)}
-                        </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{invoice.invoiceNumber}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(invoice.issueDate), "MMM d, yyyy")}
+                        </p>
                       </div>
+                    </Link>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <StatusBadge status={invoice.status} />
+                      <span className="text-sm font-medium tabular-nums">
+                        {formatCurrency(Number(invoice.total), invoice.currency)}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                        onClick={() => deleteInvoiceMutation.mutate(invoice.id)}
+                        disabled={deleteInvoiceMutation.isPending}
+                        data-testid={`button-delete-invoice-${invoice.id}`}
+                        title="Remove invoice"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             )}

@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation, useParams } from "wouter";
+import { useLocation, useParams, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,9 +70,9 @@ export default function InvoiceForm() {
 
   useEffect(() => {
     if (!isEdit && settings) {
-      if (settings.businessName) setFromName(settings.businessName);
-      if (settings.businessEmail) setFromEmail(settings.businessEmail);
-      if (settings.businessAddress) setFromAddress(settings.businessAddress);
+      setFromName(settings.businessName || "");
+      setFromEmail(settings.businessEmail || "");
+      setFromAddress(settings.businessAddress || "");
     }
   }, [isEdit, settings]);
 
@@ -337,8 +337,11 @@ export default function InvoiceForm() {
 
           <div className="space-y-5">
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
                 <CardTitle className="text-base font-medium">From</CardTitle>
+                <Link href="/settings">
+                  <span className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 cursor-pointer">Edit in Settings</span>
+                </Link>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-2">
