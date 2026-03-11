@@ -192,20 +192,20 @@ export default function InvoiceDetail() {
                 </TableHeader>
                 <TableBody>
                   {lineItems.map((item, i) => (
-                    <TableRow key={i}>
+                    <TableRow key={i} data-testid={`row-line-item-${i}`}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{item.name || item.description || "Untitled item"}</p>
+                          <p className="font-medium" data-testid={`text-line-item-name-${i}`}>{item.name || item.description || "Untitled item"}</p>
                           {item.name && item.description && (
-                            <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5" data-testid={`text-line-item-desc-${i}`}>{item.description}</p>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-right tabular-nums" data-testid={`text-line-item-qty-${i}`}>{item.quantity}</TableCell>
+                      <TableCell className="text-right tabular-nums" data-testid={`text-line-item-rate-${i}`}>
                         {formatCurrency(Number(item.rate), invoice.currency)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">
+                      <TableCell className="text-right tabular-nums font-medium" data-testid={`text-line-item-amount-${i}`}>
                         {formatCurrency(item.quantity * item.rate, invoice.currency)}
                       </TableCell>
                     </TableRow>
