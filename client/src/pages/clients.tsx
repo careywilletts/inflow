@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Users, Plus, Search, Mail, Phone, Building2, MapPin } from "lucide-react";
+import { Users, Plus, Search, Mail, Phone, MapPin, Trash2 } from "lucide-react";
 import type { Client, InsertClient } from "@shared/schema";
 import { useState } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -24,6 +24,19 @@ export default function Clients() {
     c.email.toLowerCase().includes(search.toLowerCase()) ||
     c.company?.toLowerCase().includes(search.toLowerCase())
   ) ?? [];
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/clients/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      toast({ title: "Client removed" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertClient) => {
@@ -143,12 +156,27 @@ export default function Clients() {
                       {client.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <h3 className="font-medium truncate" data-testid={`text-client-name-${client.id}`}>{client.name}</h3>
                     {client.company && (
                       <p className="text-xs text-muted-foreground truncate">{client.company}</p>
                     )}
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-muted-foreground/50 hover:text-destructive active:text-destructive"
+                    onClick={() => {
+                      if (confirm(`Remove ${client.name}? This cannot be undone.`)) {
+                        deleteMutation.mutate(client.id);
+                      }
+                    }}
+                    disabled={deleteMutation.isPending}
+                    data-testid={`button-delete-client-${client.id}`}
+                    title="Remove client"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
                 <div className="space-y-1.5 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
