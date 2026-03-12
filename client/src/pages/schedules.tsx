@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { Clock, Plus, CalendarClock, Pause, Play } from "lucide-react";
+import { Clock, Plus, CalendarClock, Pause, Play, Trash2 } from "lucide-react";
 import type { Schedule, Invoice, Client } from "@shared/schema";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
@@ -63,9 +63,22 @@ export default function Schedules() {
       const res = await apiRequest("PATCH", `/api/schedules/${id}`, { isActive });
       return res.json();
     },
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      toast({ title: vars.isActive ? "Schedule resumed" : "Schedule paused" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/schedules/${id}`);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
-      toast({ title: "Schedule updated" });
+      toast({ title: "Schedule deleted" });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -220,18 +233,37 @@ export default function Schedules() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 shrink-0">
+                    <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground">Next Send</p>
                         <p className="text-sm font-medium tabular-nums">
                           {format(new Date(schedule.nextSendDate), "MMM d, yyyy")}
                         </p>
                       </div>
-                      <Switch
-                        checked={schedule.isActive}
-                        onCheckedChange={(checked) => toggleMutation.mutate({ id: schedule.id, isActive: checked })}
-                        data-testid={`switch-schedule-${schedule.id}`}
-                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => toggleMutation.mutate({ id: schedule.id, isActive: !schedule.isActive })}
+                        disabled={toggleMutation.isPending}
+                        data-testid={`button-toggle-schedule-${schedule.id}`}
+                      >
+                        {schedule.isActive
+                          ? <><Pause className="w-3.5 h-3.5" /> Pause</>
+                          : <><Play className="w-3.5 h-3.5" /> Resume</>
+                        }
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => deleteMutation.mutate(schedule.id)}
+                        disabled={deleteMutation.isPending}
+                        data-testid={`button-delete-schedule-${schedule.id}`}
+                        title="Delete schedule"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
