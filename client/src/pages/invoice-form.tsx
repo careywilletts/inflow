@@ -33,6 +33,10 @@ export default function InvoiceForm() {
 
   const { data: clients } = useQuery<Client[]>({ queryKey: ["/api/clients"] });
   const { data: settings } = useQuery<Settings>({ queryKey: ["/api/settings"] });
+  const { data: nextNumberData } = useQuery<{ invoiceNumber: string }>({
+    queryKey: ["/api/invoices/next-number"],
+    enabled: !isEdit,
+  });
   const { data: existingInvoice, isLoading: loadingInvoice } = useQuery<Invoice>({
     queryKey: ["/api/invoices", params.id],
     enabled: !!isEdit,
@@ -50,6 +54,12 @@ export default function InvoiceForm() {
   const [fromEmail, setFromEmail] = useState("");
   const [fromAddress, setFromAddress] = useState("");
   const [currency, setCurrency] = useState("GBP");
+
+  useEffect(() => {
+    if (!isEdit && nextNumberData?.invoiceNumber) {
+      setInvoiceNumber(nextNumberData.invoiceNumber);
+    }
+  }, [isEdit, nextNumberData]);
 
   useEffect(() => {
     if (existingInvoice) {
@@ -111,6 +121,7 @@ export default function InvoiceForm() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices/next-number"] });
       toast({ title: isEdit ? "Invoice updated" : "Invoice created", description: `Invoice ${invoiceNumber} has been saved.` });
       navigate(`/invoices/${result.id}`);
     },
@@ -176,12 +187,15 @@ export default function InvoiceForm() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="invoiceNumber">Invoice Number *</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="invoiceNumber">Invoice Number *</Label>
+                      {!isEdit && <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Auto-generated</span>}
+                    </div>
                     <Input
                       id="invoiceNumber"
                       value={invoiceNumber}
                       onChange={e => setInvoiceNumber(e.target.value)}
-                      placeholder="INV-001"
+                      placeholder="INV-2026-001"
                       required
                       data-testid="input-invoice-number"
                     />

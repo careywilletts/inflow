@@ -75,6 +75,21 @@ export async function registerRoutes(
     res.json(invs);
   });
 
+  app.get("/api/invoices/next-number", async (_req, res) => {
+    const allInvoices = await storage.getInvoices();
+    const year = new Date().getFullYear();
+    const prefix = `INV-${year}-`;
+    let maxSeq = 0;
+    for (const inv of allInvoices) {
+      if (inv.invoiceNumber.startsWith(prefix)) {
+        const seq = parseInt(inv.invoiceNumber.slice(prefix.length), 10);
+        if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+      }
+    }
+    const next = String(maxSeq + 1).padStart(3, "0");
+    res.json({ invoiceNumber: `${prefix}${next}` });
+  });
+
   app.get("/api/invoices/:id", async (req, res) => {
     const inv = await storage.getInvoice(req.params.id);
     if (!inv) return res.status(404).json({ message: "Invoice not found" });
