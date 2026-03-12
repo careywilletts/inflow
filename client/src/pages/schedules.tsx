@@ -209,7 +209,7 @@ export default function Schedules() {
             return (
               <Card key={schedule.id} className="hover-elevate" data-testid={`card-schedule-${schedule.id}`}>
                 <CardContent className="p-5">
-                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-4 min-w-0">
                       <div className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${
                         schedule.isActive ? "bg-primary/10" : "bg-muted"
