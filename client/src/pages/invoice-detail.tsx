@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/status-badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Edit, Send, CheckCircle, Printer } from "lucide-react";
+import { ArrowLeft, Edit, Send, CheckCircle, Printer, Trash2 } from "lucide-react";
 import type { Invoice, Client, LineItem, Settings } from "@shared/schema";
 import { format } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -39,6 +39,20 @@ export default function InvoiceDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", params.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       toast({ title: "Status updated" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteInvoice = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", `/api/invoices/${params.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      toast({ title: "Invoice deleted" });
+      navigate("/invoices");
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -99,7 +113,7 @@ export default function InvoiceDetail() {
               Mark as Sent
             </Button>
           )}
-          {invoice.status === "sent" && (
+          {invoice.status !== "paid" && (
             <Button
               variant="outline"
               size="sm"
@@ -120,6 +134,21 @@ export default function InvoiceDetail() {
           <Button variant="outline" size="sm" onClick={() => window.print()} data-testid="button-print">
             <Printer className="w-4 h-4 mr-2" />
             Print
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            onClick={() => {
+              if (confirm("Delete this invoice? This cannot be undone.")) {
+                deleteInvoice.mutate();
+              }
+            }}
+            disabled={deleteInvoice.isPending}
+            data-testid="button-delete-invoice"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete
           </Button>
         </div>
       </div>
