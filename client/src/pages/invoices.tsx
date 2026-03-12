@@ -10,7 +10,8 @@ import { FileText, Plus, Search } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Invoice, Client } from "@shared/schema";
 import { format } from "date-fns";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearch } from "wouter";
 
 function formatCurrency(amount: number, currency: string = "GBP"): string {
   const locale = currency === "GBP" ? "en-GB" : currency === "EUR" ? "de-DE" : "en-US";
@@ -18,10 +19,17 @@ function formatCurrency(amount: number, currency: string = "GBP"): string {
 }
 
 export default function Invoices() {
+  const searchString = useSearch();
   const { data: invoices, isLoading } = useQuery<Invoice[]>({ queryKey: ["/api/invoices"] });
   const { data: clients } = useQuery<Client[]>({ queryKey: ["/api/clients"] });
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const status = params.get("status");
+    if (status) setStatusFilter(status);
+  }, [searchString]);
 
   const clientMap = useMemo(() => {
     const map = new Map<string, Client>();

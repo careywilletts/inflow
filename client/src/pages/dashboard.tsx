@@ -16,18 +16,19 @@ function formatCurrency(amount: number, currency: string = "GBP"): string {
   return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
 }
 
-function StatCard({ title, value, icon: Icon, description, loading, accent }: {
+function StatCard({ title, value, icon: Icon, description, loading, accent, href }: {
   title: string;
   value: string;
   icon: any;
   description?: string;
   loading?: boolean;
   accent?: "green" | "pink";
+  href?: string;
 }) {
   const iconBg = accent === "pink" ? "bg-secondary" : "bg-primary/15";
   const iconColor = accent === "pink" ? "text-secondary-foreground" : "text-primary";
-  return (
-    <Card className="hover-elevate border-2">
+  const card = (
+    <Card className={`border-2 ${href ? "hover-elevate cursor-pointer" : ""}`}>
       <CardContent className="p-5">
         <div className="flex items-center justify-between gap-2">
           <div className="space-y-1">
@@ -48,6 +49,8 @@ function StatCard({ title, value, icon: Icon, description, loading, accent }: {
       </CardContent>
     </Card>
   );
+  if (href) return <Link href={href}>{card}</Link>;
+  return card;
 }
 
 export default function Dashboard() {
@@ -133,6 +136,7 @@ export default function Dashboard() {
           description="From paid invoices"
           loading={loading}
           accent="green"
+          href="/invoices?status=paid"
         />
         <StatCard
           title="Pending"
@@ -141,6 +145,7 @@ export default function Dashboard() {
           description="Awaiting payment"
           loading={loading}
           accent="pink"
+          href="/invoices?status=sent"
         />
         <StatCard
           title="Total Clients"
@@ -149,6 +154,7 @@ export default function Dashboard() {
           description="Active clients"
           loading={loading}
           accent="green"
+          href="/clients"
         />
         <StatCard
           title="Active Schedules"
@@ -157,6 +163,7 @@ export default function Dashboard() {
           description="Automated invoices"
           loading={loading}
           accent="pink"
+          href="/schedules"
         />
       </div>
 
