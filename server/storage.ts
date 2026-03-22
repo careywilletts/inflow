@@ -26,6 +26,7 @@ export interface IStorage {
   createSchedule(data: InsertSchedule): Promise<Schedule>;
   updateSchedule(id: string, data: Partial<InsertSchedule>): Promise<Schedule | undefined>;
   deleteSchedule(id: string): Promise<void>;
+  deleteSchedulesByInvoiceId(invoiceId: string): Promise<void>;
 
   getSettings(): Promise<Settings | undefined>;
   upsertSettings(data: Partial<InsertSettings>): Promise<Settings>;
@@ -87,6 +88,9 @@ export class DatabaseStorage implements IStorage {
   }
   async deleteSchedule(id: string): Promise<void> {
     await db.delete(schedules).where(eq(schedules.id, id));
+  }
+  async deleteSchedulesByInvoiceId(invoiceId: string): Promise<void> {
+    await db.delete(schedules).where(eq(schedules.invoiceId, invoiceId));
   }
 
   async getSettings(): Promise<Settings | undefined> {

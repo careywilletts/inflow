@@ -110,6 +110,7 @@ export async function registerRoutes(
   });
 
   app.delete("/api/invoices/:id", async (req, res) => {
+    await storage.deleteSchedulesByInvoiceId(req.params.id);
     await storage.deleteInvoice(req.params.id);
     res.status(204).send();
   });
