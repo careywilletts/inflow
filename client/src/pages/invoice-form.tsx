@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, ArrowLeft, Save } from "lucide-react";
-import type { Client, Invoice, LineItem, Settings } from "@shared/schema";
+import { CalendarClock, Plus, Trash2, ArrowLeft, Save } from "lucide-react";
+import type { Client, Invoice, LineItem, Schedule, Settings } from "@shared/schema";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
