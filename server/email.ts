@@ -14,10 +14,10 @@ function formatCurrency(amount: number, currency: string = "GBP"): string {
   return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
 }
 
-function buildInvoiceHtml(invoice: Invoice, client: Client | undefined, settings: Settings | null): string {
+function buildInvoiceHtml(invoice: Invoice, client: Client | undefined, settings: Settings | null, logoHasCid: boolean): string {
   const lineItems = invoice.lineItems as LineItem[];
   const businessName = settings?.businessName || invoice.fromName || "Inflo";
-  const logoUrl = settings?.logoUrl ? `${process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : ""}${settings.logoUrl}` : null;
+  const logoSrc = logoHasCid ? "cid:invoice-logo" : null;
 
   const lineItemRows = lineItems.map(item => `
     <tr>
@@ -44,7 +44,7 @@ function buildInvoiceHtml(invoice: Invoice, client: Client | undefined, settings
     <!-- Header -->
     <div style="padding:28px 32px;border-bottom:2px solid #2c2a24;display:flex;align-items:center;justify-content:space-between;">
       <div style="display:flex;align-items:center;gap:14px;">
-        ${logoUrl ? `<img src="${logoUrl}" alt="Logo" style="width:48px;height:48px;object-fit:contain;border-radius:50%;border:2px solid #7a8c3a;">` : `<div style="width:48px;height:48px;border-radius:50%;background:#e8d5cc;border:2px solid #7a8c3a;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#7a8c3a;">IN</div>`}
+        ${logoSrc ? `<img src="${logoSrc}" alt="Logo" style="width:48px;height:48px;object-fit:contain;border-radius:50%;border:2px solid #7a8c3a;">` : `<div style="width:48px;height:48px;border-radius:50%;background:#e8d5cc;border:2px solid #7a8c3a;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#7a8c3a;">IN</div>`}
         <div>
           <div style="font-weight:700;font-size:18px;letter-spacing:-0.5px;">${businessName}</div>
           ${settings?.vatNumber ? `<div style="font-size:12px;color:#7a7565;">VAT: ${settings.vatNumber}</div>` : ""}
@@ -172,7 +172,24 @@ export async function sendInvoiceEmail(
     return { success: false, error: "No recipient email address available" };
   }
 
-  const html = buildInvoiceHtml(invoice, client, settings);
+  // Extract logo for CID embedding if it's a base64 data URL
+  let logoAttachment: { filename: string; content: Buffer; contentType: string; cid: string; } | null = null;
+  const logoUrl = settings?.logoUrl || "";
+  if (logoUrl.startsWith("data:")) {
+    const matches = logoUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (matches) {
+      const contentType = matches[1];
+      const ext = contentType.split("/")[1] || "png";
+      logoAttachment = {
+        filename: `logo.${ext}`,
+        content: Buffer.from(matches[2], "base64"),
+        contentType,
+        cid: "invoice-logo",
+      };
+    }
+  }
+
+  const html = buildInvoiceHtml(invoice, client, settings, !!logoAttachment);
   const subject = `Invoice ${invoice.invoiceNumber} from ${businessName}`;
 
   try {
@@ -182,6 +199,7 @@ export async function sendInvoiceEmail(
       cc: ccAddresses.length > 0 ? ccAddresses.join(", ") : undefined,
       subject,
       html,
+      attachments: logoAttachment ? [{ ...logoAttachment, contentDisposition: "inline" }] : undefined,
     });
     return { success: true };
   } catch (err: any) {
