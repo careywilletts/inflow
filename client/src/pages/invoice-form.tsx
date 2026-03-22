@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, ArrowLeft, Save } from "lucide-react";
 import type { Client, Invoice, LineItem, Settings } from "@shared/schema";
 import { useState, useEffect } from "react";
@@ -49,6 +50,7 @@ export default function InvoiceForm() {
   const [dueDate, setDueDate] = useState(formatDateForInput(new Date(Date.now() + 30 * 86400000)));
   const [lineItems, setLineItems] = useState<LineItem[]>([{ name: "", description: "", quantity: 1, rate: 0 }]);
   const [taxRate, setTaxRate] = useState(20);
+  const [vatExempt, setVatExempt] = useState(false);
   const [notes, setNotes] = useState("");
   const [fromName, setFromName] = useState("");
   const [fromEmail, setFromEmail] = useState("");
@@ -69,7 +71,9 @@ export default function InvoiceForm() {
       setIssueDate(formatDateForInput(existingInvoice.issueDate));
       setDueDate(formatDateForInput(existingInvoice.dueDate));
       setLineItems(existingInvoice.lineItems as LineItem[]);
-      setTaxRate(Number(existingInvoice.taxRate));
+      const rate = Number(existingInvoice.taxRate);
+      setTaxRate(rate || 20);
+      setVatExempt(rate === 0);
       setNotes(existingInvoice.notes || "");
       setFromName(existingInvoice.fromName || "");
       setFromEmail(existingInvoice.fromEmail || "");
@@ -87,7 +91,8 @@ export default function InvoiceForm() {
   }, [isEdit, settings]);
 
   const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.rate, 0);
-  const taxAmount = subtotal * (taxRate / 100);
+  const effectiveTaxRate = vatExempt ? 0 : taxRate;
+  const taxAmount = subtotal * (effectiveTaxRate / 100);
   const total = subtotal + taxAmount;
 
   const addLineItem = () => {
@@ -140,7 +145,7 @@ export default function InvoiceForm() {
       dueDate: new Date(dueDate).toISOString(),
       lineItems,
       subtotal: subtotal.toFixed(2),
-      taxRate: taxRate.toFixed(2),
+      taxRate: effectiveTaxRate.toFixed(2),
       taxAmount: taxAmount.toFixed(2),
       total: total.toFixed(2),
       notes: notes || null,
@@ -392,18 +397,31 @@ export default function InvoiceForm() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="taxRate">VAT Rate (%)</Label>
-                  <Input
-                    id="taxRate"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={taxRate || ""}
-                    onChange={e => setTaxRate(Number(e.target.value) || 0)}
-                    data-testid="input-tax-rate"
-                  />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="vat-exempt" className="cursor-pointer">VAT Exempt</Label>
+                    <Switch
+                      id="vat-exempt"
+                      checked={vatExempt}
+                      onCheckedChange={setVatExempt}
+                      data-testid="switch-vat-exempt"
+                    />
+                  </div>
+                  {!vatExempt && (
+                    <div className="space-y-2">
+                      <Label htmlFor="taxRate" className="text-xs text-muted-foreground">VAT Rate (%)</Label>
+                      <Input
+                        id="taxRate"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={taxRate || ""}
+                        onChange={e => setTaxRate(Number(e.target.value) || 0)}
+                        data-testid="input-tax-rate"
+                      />
+                    </div>
+                  )}
                 </div>
                 <Separator />
                 <div className="space-y-2 text-sm">
@@ -413,12 +431,17 @@ export default function InvoiceForm() {
                       {formatCurrency(subtotal, currency)}
                     </span>
                   </div>
-                  {taxRate > 0 && (
+                  {effectiveTaxRate > 0 && (
                     <div className="flex justify-between gap-2">
-                      <span className="text-muted-foreground">VAT ({taxRate}%)</span>
+                      <span className="text-muted-foreground">VAT ({effectiveTaxRate}%)</span>
                       <span className="font-medium tabular-nums" data-testid="text-tax">
                         {formatCurrency(taxAmount, currency)}
                       </span>
+                    </div>
+                  )}
+                  {vatExempt && (
+                    <div className="flex justify-between gap-2 text-xs">
+                      <span className="text-muted-foreground italic">VAT exempt</span>
                     </div>
                   )}
                   <Separator />
