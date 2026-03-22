@@ -1,21 +1,88 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Users, Plus, Search, Mail, Phone, MapPin, Trash2 } from "lucide-react";
+import { Users, Plus, Search, Mail, Phone, MapPin, Trash2, Pencil } from "lucide-react";
 import type { Client, InsertClient } from "@shared/schema";
 import { useState } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+function ClientForm({
+  defaultValues,
+  onSubmit,
+  isPending,
+  onCancel,
+}: {
+  defaultValues?: Partial<Client>;
+  onSubmit: (data: InsertClient) => void;
+  isPending: boolean;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(defaultValues?.name ?? "");
+  const [email, setEmail] = useState(defaultValues?.email ?? "");
+  const [company, setCompany] = useState(defaultValues?.company ?? "");
+  const [phone, setPhone] = useState(defaultValues?.phone ?? "");
+  const [address, setAddress] = useState(defaultValues?.address ?? "");
+  const [notes, setNotes] = useState(defaultValues?.notes ?? "");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      name,
+      email,
+      company: company || null,
+      phone: phone || null,
+      address: address || null,
+      notes: notes || null,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Name *</Label>
+        <Input id="name" required value={name} onChange={e => setName(e.target.value)} placeholder="Client name" data-testid="input-client-name" />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="email">Email *</Label>
+        <Input id="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="client@example.com" data-testid="input-client-email" />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="company">Company</Label>
+        <Input id="company" value={company} onChange={e => setCompany(e.target.value)} placeholder="Company name" data-testid="input-client-company" />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="phone">Phone</Label>
+        <Input id="phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+44 7700 900000" data-testid="input-client-phone" />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="address">Address</Label>
+        <Textarea id="address" value={address} onChange={e => setAddress(e.target.value)} placeholder={"123 Example Street\nLondon EC1A 1BB"} data-testid="input-client-address" />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="notes">Notes</Label>
+        <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Additional notes..." data-testid="input-client-notes" />
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel} data-testid="button-cancel-client">Cancel</Button>
+        <Button type="submit" disabled={isPending} data-testid="button-save-client">
+          {isPending ? "Saving..." : "Save Client"}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
 export default function Clients() {
   const { data: clients, isLoading } = useQuery<Client[]>({ queryKey: ["/api/clients"] });
   const [search, setSearch] = useState("");
-  const [open, setOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [editClient, setEditClient] = useState<Client | null>(null);
   const { toast } = useToast();
 
   const filtered = clients?.filter(c =>
@@ -24,6 +91,36 @@ export default function Clients() {
     c.email.toLowerCase().includes(search.toLowerCase()) ||
     c.company?.toLowerCase().includes(search.toLowerCase())
   ) ?? [];
+
+  const createMutation = useMutation({
+    mutationFn: async (data: InsertClient) => {
+      const res = await apiRequest("POST", "/api/clients", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      setAddOpen(false);
+      toast({ title: "Client added" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertClient> }) => {
+      const res = await apiRequest("PATCH", `/api/clients/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      setEditClient(null);
+      toast({ title: "Client updated" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -38,34 +135,6 @@ export default function Clients() {
     },
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (data: InsertClient) => {
-      const res = await apiRequest("POST", "/api/clients", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      setOpen(false);
-      toast({ title: "Client created", description: "New client has been added successfully." });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    createMutation.mutate({
-      name: formData.get("name") as string,
-      email: formData.get("email") as string,
-      company: (formData.get("company") as string) || null,
-      phone: (formData.get("phone") as string) || null,
-      address: (formData.get("address") as string) || null,
-      notes: (formData.get("notes") as string) || null,
-    });
-  };
-
   return (
     <div className="p-6 space-y-5 max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -73,7 +142,8 @@ export default function Clients() {
           <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-clients-title">Clients</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage your client directory</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+
+        <Dialog open={addOpen} onOpenChange={setAddOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-client">
               <Plus className="w-4 h-4 mr-2" />
@@ -84,40 +154,11 @@ export default function Clients() {
             <DialogHeader>
               <DialogTitle>Add New Client</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
-                <Input id="name" name="name" required placeholder="Client name" data-testid="input-client-name" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input id="email" name="email" type="email" required placeholder="client@example.com" data-testid="input-client-email" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="company">Company</Label>
-                <Input id="company" name="company" placeholder="Company name" data-testid="input-client-company" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" name="phone" placeholder="+1 (555) 000-0000" data-testid="input-client-phone" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Textarea id="address" name="address" placeholder="Street, City, State, ZIP" data-testid="input-client-address" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" name="notes" placeholder="Additional notes..." data-testid="input-client-notes" />
-              </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button type="button" variant="outline" data-testid="button-cancel-client">Cancel</Button>
-                </DialogClose>
-                <Button type="submit" disabled={createMutation.isPending} data-testid="button-save-client">
-                  {createMutation.isPending ? "Saving..." : "Save Client"}
-                </Button>
-              </DialogFooter>
-            </form>
+            <ClientForm
+              onSubmit={data => createMutation.mutate(data)}
+              isPending={createMutation.isPending}
+              onCancel={() => setAddOpen(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -162,21 +203,33 @@ export default function Clients() {
                       <p className="text-xs text-muted-foreground truncate">{client.company}</p>
                     )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0 text-muted-foreground/50 hover:text-destructive active:text-destructive"
-                    onClick={() => {
-                      if (confirm(`Remove ${client.name}? This cannot be undone.`)) {
-                        deleteMutation.mutate(client.id);
-                      }
-                    }}
-                    disabled={deleteMutation.isPending}
-                    data-testid={`button-delete-client-${client.id}`}
-                    title="Remove client"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground/50 hover:text-primary active:text-primary"
+                      onClick={() => setEditClient(client)}
+                      data-testid={`button-edit-client-${client.id}`}
+                      title="Edit client"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground/50 hover:text-destructive active:text-destructive"
+                      onClick={() => {
+                        if (confirm(`Remove ${client.name}? This cannot be undone.`)) {
+                          deleteMutation.mutate(client.id);
+                        }
+                      }}
+                      disabled={deleteMutation.isPending}
+                      data-testid={`button-delete-client-${client.id}`}
+                      title="Remove client"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-1.5 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
@@ -201,6 +254,23 @@ export default function Clients() {
           ))}
         </div>
       )}
+
+      <Dialog open={!!editClient} onOpenChange={open => { if (!open) setEditClient(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Client</DialogTitle>
+          </DialogHeader>
+          {editClient && (
+            <ClientForm
+              key={editClient.id}
+              defaultValues={editClient}
+              onSubmit={data => updateMutation.mutate({ id: editClient.id, data })}
+              isPending={updateMutation.isPending}
+              onCancel={() => setEditClient(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
