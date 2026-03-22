@@ -42,6 +42,11 @@ export default function InvoiceForm() {
     queryKey: ["/api/invoices", params.id],
     enabled: !!isEdit,
   });
+  const { data: allSchedules } = useQuery<Schedule[]>({
+    queryKey: ["/api/schedules"],
+    enabled: !!isEdit,
+  });
+  const existingSchedule = allSchedules?.find(s => s.invoiceId === params.id);
 
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [clientId, setClientId] = useState("");
@@ -56,6 +61,10 @@ export default function InvoiceForm() {
   const [fromEmail, setFromEmail] = useState("");
   const [fromAddress, setFromAddress] = useState("");
   const [currency, setCurrency] = useState("GBP");
+
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduleFrequency, setScheduleFrequency] = useState("monthly");
+  const [scheduleNextDate, setScheduleNextDate] = useState(formatDateForInput(new Date(Date.now() + 30 * 86400000)));
 
   useEffect(() => {
     if (!isEdit && nextNumberData?.invoiceNumber) {
@@ -90,6 +99,14 @@ export default function InvoiceForm() {
     }
   }, [isEdit, settings]);
 
+  useEffect(() => {
+    if (existingSchedule) {
+      setScheduleEnabled(true);
+      setScheduleFrequency(existingSchedule.frequency);
+      setScheduleNextDate(formatDateForInput(existingSchedule.nextSendDate));
+    }
+  }, [existingSchedule]);
+
   const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.rate, 0);
   const effectiveTaxRate = vatExempt ? 0 : taxRate;
   const taxAmount = subtotal * (effectiveTaxRate / 100);
@@ -117,16 +134,42 @@ export default function InvoiceForm() {
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
+      let inv: Invoice;
       if (isEdit) {
         const res = await apiRequest("PATCH", `/api/invoices/${params.id}`, data);
-        return res.json();
+        inv = await res.json();
+      } else {
+        const res = await apiRequest("POST", "/api/invoices", data);
+        inv = await res.json();
       }
-      const res = await apiRequest("POST", "/api/invoices", data);
-      return res.json();
+
+      if (scheduleEnabled && scheduleFrequency && scheduleNextDate) {
+        const schedulePayload = {
+          invoiceId: inv.id,
+          clientId: inv.clientId || null,
+          frequency: scheduleFrequency,
+          nextSendDate: new Date(scheduleNextDate).toISOString(),
+          isActive: true,
+        };
+        if (existingSchedule) {
+          await apiRequest("PATCH", `/api/schedules/${existingSchedule.id}`, {
+            frequency: scheduleFrequency,
+            nextSendDate: new Date(scheduleNextDate).toISOString(),
+            isActive: true,
+          });
+        } else {
+          await apiRequest("POST", "/api/schedules", schedulePayload);
+        }
+      } else if (!scheduleEnabled && existingSchedule) {
+        await apiRequest("DELETE", `/api/schedules/${existingSchedule.id}`);
+      }
+
+      return inv;
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices/next-number"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
       toast({ title: isEdit ? "Invoice updated" : "Invoice created", description: `Invoice ${invoiceNumber} has been saved.` });
       navigate(`/invoices/${result.id}`);
     },
@@ -452,6 +495,58 @@ export default function InvoiceForm() {
                     </span>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-medium flex items-center gap-2">
+                  <CalendarClock className="w-4 h-4" />
+                  Repeat this Invoice
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="schedule-enabled" className="cursor-pointer text-sm">
+                    Send automatically
+                  </Label>
+                  <Switch
+                    id="schedule-enabled"
+                    checked={scheduleEnabled}
+                    onCheckedChange={setScheduleEnabled}
+                    data-testid="switch-schedule-enabled"
+                  />
+                </div>
+                {scheduleEnabled && (
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Frequency</Label>
+                      <Select value={scheduleFrequency} onValueChange={setScheduleFrequency}>
+                        <SelectTrigger data-testid="select-schedule-frequency">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                          <SelectItem value="yearly">Yearly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Next send date</Label>
+                      <Input
+                        type="date"
+                        value={scheduleNextDate}
+                        onChange={e => setScheduleNextDate(e.target.value)}
+                        data-testid="input-schedule-next-date"
+                      />
+                    </div>
+                    {existingSchedule && (
+                      <p className="text-xs text-muted-foreground italic">Updating existing schedule</p>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
 
