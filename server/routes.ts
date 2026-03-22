@@ -48,6 +48,7 @@ export async function registerRoutes(
   });
 
   app.delete("/api/clients/:id", async (req, res) => {
+    await storage.nullifyClientReferences(req.params.id);
     await storage.deleteClient(req.params.id);
     res.status(204).send();
   });
@@ -88,7 +89,10 @@ export async function registerRoutes(
 
   app.patch("/api/invoices/:id", async (req, res) => {
     const existing = await storage.getInvoice(req.params.id);
-    const inv = await storage.updateInvoice(req.params.id, req.body);
+    const body = { ...req.body };
+    if (body.issueDate) body.issueDate = new Date(body.issueDate);
+    if (body.dueDate) body.dueDate = new Date(body.dueDate);
+    const inv = await storage.updateInvoice(req.params.id, body);
     if (!inv) return res.status(404).json({ message: "Invoice not found" });
 
     if (req.body.status === "sent" && existing?.status !== "sent") {

@@ -14,6 +14,7 @@ export interface IStorage {
   createClient(data: InsertClient): Promise<Client>;
   updateClient(id: string, data: Partial<InsertClient>): Promise<Client | undefined>;
   deleteClient(id: string): Promise<void>;
+  nullifyClientReferences(clientId: string): Promise<void>;
 
   getInvoices(): Promise<Invoice[]>;
   getInvoice(id: string): Promise<Invoice | undefined>;
@@ -50,6 +51,10 @@ export class DatabaseStorage implements IStorage {
   }
   async deleteClient(id: string): Promise<void> {
     await db.delete(clients).where(eq(clients.id, id));
+  }
+  async nullifyClientReferences(clientId: string): Promise<void> {
+    await db.update(invoices).set({ clientId: null }).where(eq(invoices.clientId, clientId));
+    await db.update(schedules).set({ clientId: null }).where(eq(schedules.clientId, clientId));
   }
 
   async getInvoices(): Promise<Invoice[]> {
