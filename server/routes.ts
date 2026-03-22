@@ -3,26 +3,10 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertClientSchema, insertInvoiceSchema, insertScheduleSchema, insertSettingsSchema } from "@shared/schema";
 import multer from "multer";
-import path from "path";
-import fs from "fs";
-import express from "express";
-import crypto from "crypto";
 import { sendInvoiceEmail } from "./email";
 
-const uploadsDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, uploadsDir),
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname);
-      const name = crypto.randomBytes(16).toString("hex");
-      cb(null, `${name}${ext}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = ["image/png", "image/jpeg", "image/webp"];
@@ -38,8 +22,6 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-
-  app.use("/uploads", express.static(uploadsDir));
 
   app.get("/api/clients", async (_req, res) => {
     const clients = await storage.getClients();
@@ -76,9 +58,10 @@ export async function registerRoutes(
   });
 
   app.get("/api/invoices/next-number", async (_req, res) => {
-    const allInvoices = await storage.getInvoices();
+    const [allInvoices, settings] = await Promise.all([storage.getInvoices(), storage.getSettings()]);
     const year = new Date().getFullYear();
-    const prefix = `INV-${year}-`;
+    const rawPrefix = (settings?.invoicePrefix || "INV").toUpperCase().trim();
+    const prefix = `${rawPrefix}-${year}-`;
     let maxSeq = 0;
     for (const inv of allInvoices) {
       if (inv.invoiceNumber.startsWith(prefix)) {
@@ -162,7 +145,7 @@ export async function registerRoutes(
 
   app.get("/api/settings", async (_req, res) => {
     const s = await storage.getSettings();
-    res.json(s || { id: null, logoUrl: null, businessName: null, businessEmail: null, businessAddress: null, ccEmail1: null, ccEmail2: null, vatNumber: null, bankName: null, accountName: null, sortCode: null, accountNumber: null });
+    res.json(s || { id: null, logoUrl: null, businessName: null, businessEmail: null, businessAddress: null, ccEmail1: null, ccEmail2: null, vatNumber: null, bankName: null, accountName: null, sortCode: null, accountNumber: null, invoicePrefix: null });
   });
 
   app.put("/api/settings", async (req, res) => {
@@ -174,28 +157,18 @@ export async function registerRoutes(
 
   app.post("/api/settings/logo", (req, res, next) => {
     upload.single("logo")(req, res, (err) => {
-      if (err) {
-        return res.status(400).json({ message: err.message });
-      }
+      if (err) return res.status(400).json({ message: err.message });
       next();
     });
   }, async (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
-    }
-    const logoUrl = `/uploads/${req.file.filename}`;
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+    const base64 = req.file.buffer.toString("base64");
+    const logoUrl = `data:${req.file.mimetype};base64,${base64}`;
     const s = await storage.upsertSettings({ logoUrl });
     res.json(s);
   });
 
   app.delete("/api/settings/logo", async (_req, res) => {
-    const existing = await storage.getSettings();
-    if (existing?.logoUrl) {
-      const filePath = path.join(uploadsDir, path.basename(existing.logoUrl));
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
     const s = await storage.upsertSettings({ logoUrl: null });
     res.json(s);
   });

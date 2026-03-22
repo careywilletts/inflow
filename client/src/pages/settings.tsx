@@ -27,6 +27,7 @@ export default function SettingsPage() {
   const [accountName, setAccountName] = useState("");
   const [sortCode, setSortCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
+  const [invoicePrefix, setInvoicePrefix] = useState("");
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -41,6 +42,7 @@ export default function SettingsPage() {
       setAccountName(settings.accountName || "");
       setSortCode(settings.sortCode || "");
       setAccountNumber(settings.accountNumber || "");
+      setInvoicePrefix(settings.invoicePrefix || "");
     }
   }, [settings]);
 
@@ -117,6 +119,7 @@ export default function SettingsPage() {
       accountName: accountName || null,
       sortCode: sortCode || null,
       accountNumber: accountNumber || null,
+      invoicePrefix: invoicePrefix.trim().toUpperCase() || null,
     });
   };
 
@@ -262,6 +265,18 @@ export default function SettingsPage() {
                 data-testid="input-vat-number"
               />
               <p className="text-xs text-muted-foreground">Displayed at the bottom of your invoices</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invoicePrefix">Invoice Number Prefix</Label>
+              <Input
+                id="invoicePrefix"
+                value={invoicePrefix}
+                onChange={e => setInvoicePrefix(e.target.value.toUpperCase())}
+                placeholder="e.g. INV or BFS"
+                maxLength={10}
+                data-testid="input-invoice-prefix"
+              />
+              <p className="text-xs text-muted-foreground">New invoices will be numbered {(invoicePrefix.trim() || "INV").toUpperCase()}-{new Date().getFullYear()}-001, -002, etc.</p>
             </div>
           </CardContent>
         </Card>

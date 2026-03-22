@@ -82,6 +82,7 @@ export const settings = pgTable("settings", {
   accountName: text("account_name"),
   sortCode: text("sort_code"),
   accountNumber: text("account_number"),
+  invoicePrefix: text("invoice_prefix"),
 });
 
 export const insertSettingsSchema = createInsertSchema(settings).omit({ id: true });

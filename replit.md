@@ -4,6 +4,11 @@
 Inflo is a business invoice management application that helps users design, create, and automate invoices. It supports scheduling invoices on weekly, monthly, or yearly basis. Built as a PWA for iOS/Android installability. Default currency is GBP with 20% VAT.
 
 ## Recent Changes
+- 2026-03-22: Logo now stored as base64 data URL in DB (persists across deployments)
+- 2026-03-22: Mobile sidebar auto-closes when a nav item is tapped
+- 2026-03-22: Invoice number prefix customisable via Settings (e.g. BFS → BFS-2026-001)
+- 2026-03-22: Added delete button to client cards
+- 2026-03-22: Dashboard stat cards are clickable links to filtered views
 - 2026-03-11: Enhanced line items with product/service name field, redesigned invoice form as card-based "Products & Services" layout
 - 2026-03-11: Added business email field to settings (for invoice email copies)
 - 2026-03-11: Updated invoice detail to show product name prominently with description as subtitle
