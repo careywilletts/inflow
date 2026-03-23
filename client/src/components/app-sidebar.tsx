@@ -61,7 +61,7 @@ export function AppSidebar() {
               </div>
             )}
             <span className="text-base font-bold tracking-tight uppercase leading-tight min-w-0 break-words">
-              {settings?.businessName || "Inflo"}
+              {settings?.businessName || "Inflow"}
             </span>
           </div>
         </Link>
@@ -101,7 +101,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4">
-        <p className="text-[10px] text-muted-foreground text-center uppercase tracking-widest font-medium">Inflo v1.0</p>
+        <p className="text-[10px] text-muted-foreground text-center uppercase tracking-widest font-medium">Inflow v1.0</p>
       </SidebarFooter>
     </Sidebar>
   );

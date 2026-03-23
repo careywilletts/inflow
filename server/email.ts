@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import type { Invoice, Client, Settings, LineItem } from "@shared/schema";
+import { generateInvoicePdf } from "./pdf";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -16,7 +17,7 @@ function formatCurrency(amount: number, currency: string = "GBP"): string {
 
 function buildInvoiceHtml(invoice: Invoice, client: Client | undefined, settings: Settings | null, logoHasCid: boolean): string {
   const lineItems = invoice.lineItems as LineItem[];
-  const businessName = settings?.businessName || invoice.fromName || "Inflo";
+  const businessName = settings?.businessName || invoice.fromName || "Inflow";
   const logoSrc = logoHasCid ? "cid:invoice-logo" : null;
 
   const lineItemRows = lineItems.map(item => `
@@ -143,7 +144,7 @@ function buildInvoiceHtml(invoice: Invoice, client: Client | undefined, settings
 
     <!-- Footer -->
     <div style="padding:16px 32px;border-top:2px solid #2c2a24;text-align:center;font-size:12px;color:#7a7565;">
-      Sent via Inflo &mdash; Smart Invoice Automation
+      Sent via Inflow &mdash; Smart Invoice Automation
     </div>
   </div>
 </body>
@@ -160,7 +161,7 @@ export async function sendInvoiceEmail(
     return { success: false, error: "Gmail credentials not configured" };
   }
 
-  const businessName = settings?.businessName || invoice.fromName || "Inflo";
+  const businessName = settings?.businessName || invoice.fromName || "Inflow";
   const toEmail = client?.email;
   const ccAddresses = [
     settings?.businessEmail,
@@ -192,6 +193,23 @@ export async function sendInvoiceEmail(
   const html = buildInvoiceHtml(invoice, client, settings, !!logoAttachment);
   const subject = `Invoice ${invoice.invoiceNumber} from ${businessName}`;
 
+  let pdfBuffer: Buffer | null = null;
+  try {
+    pdfBuffer = await generateInvoicePdf(invoice, client, settings);
+  } catch (err: any) {
+    console.error("[pdf] Failed to generate invoice PDF:", err.message);
+  }
+
+  const attachments: any[] = [];
+  if (logoAttachment) attachments.push({ ...logoAttachment, contentDisposition: "inline" });
+  if (pdfBuffer) {
+    attachments.push({
+      filename: `Invoice-${invoice.invoiceNumber}.pdf`,
+      content: pdfBuffer,
+      contentType: "application/pdf",
+    });
+  }
+
   try {
     await transporter.sendMail({
       from: `"${businessName}" <${process.env.GMAIL_USER}>`,
@@ -199,7 +217,7 @@ export async function sendInvoiceEmail(
       cc: ccAddresses.length > 0 ? ccAddresses.join(", ") : undefined,
       subject,
       html,
-      attachments: logoAttachment ? [{ ...logoAttachment, contentDisposition: "inline" }] : undefined,
+      attachments: attachments.length > 0 ? attachments : undefined,
     });
     return { success: true };
   } catch (err: any) {

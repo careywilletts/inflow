@@ -1,7 +1,7 @@
-# Inflo - Smart Invoice Automation
+# Inflow - Smart Invoice Automation
 
 ## Overview
-Inflo is a business invoice management application that helps users design, create, and automate invoices. It supports scheduling invoices on weekly, monthly, or yearly basis. Built as a PWA for iOS/Android installability. Default currency is GBP with 20% VAT.
+Inflow is a business invoice management application that helps users design, create, and automate invoices. It supports scheduling invoices on weekly, monthly, or yearly basis. Built as a PWA for iOS/Android installability. Default currency is GBP with 20% VAT.
 
 ## Recent Changes
 - 2026-03-22: Logo now stored as base64 data URL in DB (persists across deployments)

@@ -1,6 +1,6 @@
 {
-  "name": "Inflo - Smart Invoice Automation",
-  "short_name": "Inflo",
+  "name": "Inflow - Smart Invoice Automation",
+  "short_name": "Inflow",
   "description": "Design, automate, and schedule professional business invoices",
   "start_url": "/",
   "display": "standalone",
