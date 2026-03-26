@@ -48,8 +48,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center border-2 border-primary/30 mx-auto mb-4">
-            <span className="text-lg font-bold text-secondary-foreground tracking-tight">IN</span>
+          <div className="bg-primary text-primary-foreground px-5 py-2 rounded font-bold tracking-[0.22em] text-sm uppercase w-fit mx-auto mb-4">
+            INFLOW
           </div>
           <h1 className="text-2xl font-bold tracking-tight uppercase">Inflow</h1>
           <p className="text-muted-foreground text-sm mt-1">Smart invoice automation</p>

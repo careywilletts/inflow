@@ -29,8 +29,8 @@ export default function CheckEmail() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm text-center">
-        <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center border-2 border-primary/30 mx-auto mb-6">
-          <span className="text-lg font-bold text-secondary-foreground tracking-tight">IN</span>
+        <div className="bg-primary text-primary-foreground px-5 py-2 rounded font-bold tracking-[0.22em] text-sm uppercase w-fit mx-auto mb-6">
+          INFLOW
         </div>
 
         <Mail className="w-12 h-12 mx-auto mb-4 text-primary" />

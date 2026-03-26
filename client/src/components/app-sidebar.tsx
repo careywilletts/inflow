@@ -58,8 +58,8 @@ export function AppSidebar() {
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
               />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center border-2 border-primary/30">
-                <span className="text-sm font-bold text-secondary-foreground tracking-tight">IN</span>
+              <div className="bg-primary text-primary-foreground px-2 py-1 rounded font-bold tracking-[0.18em] text-[9px] uppercase shrink-0">
+                INFLOW
               </div>
             )}
             <span className="text-base font-bold tracking-tight uppercase leading-tight min-w-0 break-words">

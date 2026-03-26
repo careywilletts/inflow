@@ -167,13 +167,13 @@ export default function InvoiceDetail() {
                       data-testid="img-invoice-logo"
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center border-2 border-primary/30">
-                      <span className="text-base font-bold text-secondary-foreground tracking-tight">IN</span>
+                    <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded font-bold tracking-[0.2em] text-xs uppercase">
+                      INFLOW
                     </div>
                   )}
                   <div>
                     <p className="font-bold text-lg tracking-tight" data-testid="text-invoice-business-name">
-                      {orgSettings?.businessName || "Inflo"}
+                      {orgSettings?.businessName || "Inflow"}
                     </p>
                     {orgSettings?.vatNumber && (
                       <p className="text-xs text-muted-foreground">VAT: {orgSettings.vatNumber}</p>
