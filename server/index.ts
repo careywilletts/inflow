@@ -89,7 +89,54 @@ app.use((req, res, next) => {
   next();
 });
 
+async function runMigrations() {
+  const client = await pgPool.connect();
+  try {
+    // Create users table if it doesn't exist
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        email VARCHAR UNIQUE NOT NULL,
+        password_hash VARCHAR NOT NULL,
+        email_verified BOOLEAN NOT NULL DEFAULT false,
+        verification_token VARCHAR,
+        reset_token VARCHAR,
+        reset_token_expiry TIMESTAMP,
+        business_name VARCHAR,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    // Add user_id to clients if missing
+    await client.query(`
+      ALTER TABLE clients ADD COLUMN IF NOT EXISTS user_id VARCHAR REFERENCES users(id);
+    `);
+
+    // Add user_id to invoices if missing
+    await client.query(`
+      ALTER TABLE invoices ADD COLUMN IF NOT EXISTS user_id VARCHAR REFERENCES users(id);
+    `);
+
+    // Add user_id to schedules if missing
+    await client.query(`
+      ALTER TABLE schedules ADD COLUMN IF NOT EXISTS user_id VARCHAR REFERENCES users(id);
+    `);
+
+    // Add user_id to settings if missing
+    await client.query(`
+      ALTER TABLE settings ADD COLUMN IF NOT EXISTS user_id VARCHAR REFERENCES users(id) UNIQUE;
+    `);
+
+    log("Database migration complete", "migrate");
+  } catch (err) {
+    log(`Migration error: ${err}`, "migrate");
+  } finally {
+    client.release();
+  }
+}
+
 (async () => {
+  await runMigrations();
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
