@@ -12,6 +12,7 @@ import { Eye, EyeOff } from "lucide-react";
 export default function Register() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -20,7 +21,7 @@ export default function Register() {
 
   const registerMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/auth/register", { email, password });
+      const res = await apiRequest("POST", "/api/auth/register", { email, password, businessName: businessName || undefined });
       return res.json();
     },
     onSuccess: () => {
@@ -71,6 +72,18 @@ export default function Register() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="businessName">Business name</Label>
+                <Input
+                  id="businessName"
+                  type="text"
+                  placeholder="e.g. Brockley Fields Studio"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  autoComplete="organization"
+                  data-testid="input-business-name"
+                />
+              </div>
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email</Label>
                 <Input

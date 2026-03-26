@@ -225,3 +225,67 @@ export async function sendInvoiceEmail(
     return { success: false, error: err.message };
   }
 }
+
+export async function sendVerificationEmail(
+  toEmail: string,
+  verificationUrl: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f2eb;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f2eb;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#fffdf7;border:2px solid #2d3a1e;border-radius:4px;overflow:hidden;max-width:560px;">
+        <tr>
+          <td style="background:#2d3a1e;padding:28px 32px;">
+            <h1 style="margin:0;color:#f5f2eb;font-size:22px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;">Inflow</h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:36px 32px;">
+            <h2 style="margin:0 0 16px;color:#2d3a1e;font-size:20px;font-weight:700;">Verify your email address</h2>
+            <p style="margin:0 0 24px;color:#4a5240;font-size:15px;line-height:1.6;">
+              Thanks for signing up to Inflow. Click the button below to verify your email address and activate your account.
+            </p>
+            <table cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="background:#2d3a1e;border-radius:3px;padding:14px 28px;">
+                  <a href="${verificationUrl}" style="color:#f5f2eb;font-size:14px;font-weight:700;text-decoration:none;text-transform:uppercase;letter-spacing:0.08em;">Verify email address</a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:24px 0 0;color:#7a7565;font-size:13px;line-height:1.5;">
+              Or copy and paste this link into your browser:<br>
+              <a href="${verificationUrl}" style="color:#4a5240;word-break:break-all;">${verificationUrl}</a>
+            </p>
+            <p style="margin:20px 0 0;color:#7a7565;font-size:13px;">
+              This link will remain active until you verify your account. If you didn't create an Inflow account, you can safely ignore this email.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f0ede4;padding:18px 32px;border-top:1px solid #e0dbd0;">
+            <p style="margin:0;color:#7a7565;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;">Inflow · Smart invoice automation</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    await transporter.sendMail({
+      from: `"Inflow" <${process.env.GMAIL_USER}>`,
+      to: toEmail,
+      subject: "Verify your Inflow email address",
+      html,
+    });
+    return { success: true };
+  } catch (err: any) {
+    console.error("[email] Failed to send verification email:", err.message);
+    return { success: false, error: err.message };
+  }
+}

@@ -14,6 +14,8 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
   createUser(data: InsertUser): Promise<User>;
+  setVerificationToken(userId: string, token: string): Promise<void>;
+  verifyUserByToken(token: string): Promise<User | undefined>;
   claimOrphanedData(userId: string): Promise<void>;
 
   // Clients
@@ -60,6 +62,18 @@ export class DatabaseStorage implements IStorage {
       email: data.email.toLowerCase(),
     }).returning();
     return user;
+  }
+  async setVerificationToken(userId: string, token: string): Promise<void> {
+    await db.update(users).set({ verificationToken: token }).where(eq(users.id, userId));
+  }
+  async verifyUserByToken(token: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.verificationToken, token));
+    if (!user) return undefined;
+    const [updated] = await db.update(users)
+      .set({ emailVerified: true, verificationToken: null })
+      .where(eq(users.id, user.id))
+      .returning();
+    return updated;
   }
   async claimOrphanedData(userId: string): Promise<void> {
     await db.update(clients).set({ userId }).where(isNull(clients.userId));

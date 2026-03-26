@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 interface AuthUser {
   id: string;
   email: string;
+  emailVerified: boolean;
 }
 
 export function useAuth() {
@@ -29,6 +30,7 @@ export function useAuth() {
     user: user ?? null,
     isLoading,
     isAuthenticated: !!user,
+    isVerified: user?.emailVerified ?? false,
     logout: () => logoutMutation.mutate(),
   };
 }

@@ -4,6 +4,7 @@
 Inflow is a business invoice management application that helps users design, create, and automate invoices. It supports scheduling invoices on weekly, monthly, or yearly basis. Built as a PWA for iOS/Android installability. Default currency is GBP with 20% VAT.
 
 ## Recent Changes
+- 2026-03-26: Added email verification on sign-up (Gmail SMTP); added business name field to registration form (auto-saved to settings); added Check Email screen and resend verification; existing users auto-verified on migration
 - 2026-03-26: Added multi-user authentication — each business signs up with their own account and has fully isolated data (clients, invoices, schedules, settings). Existing data is automatically claimed by the first user to register. Login/register pages added, session-based auth with bcrypt password hashing.
 
 ## Authentication

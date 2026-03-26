@@ -16,13 +16,15 @@ import Schedules from "@/pages/schedules";
 import SettingsPage from "@/pages/settings";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import VerifyEmail from "@/pages/verify-email";
+import CheckEmail from "@/pages/check-email";
 import { useAuth } from "@/hooks/use-auth";
 
-const PUBLIC_PATHS = ["/login", "/register"];
+const PUBLIC_PATHS = ["/login", "/register", "/verify-email"];
 
 function ProtectedApp() {
   const [location, setLocation] = useLocation();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isVerified, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -37,17 +39,25 @@ function ProtectedApp() {
     );
   }
 
+  // Allow verify-email page always (token-based, no session needed)
+  if (location === "/verify-email") {
+    return <VerifyEmail />;
+  }
+
+  // Redirect unauthenticated users to login
   if (!isAuthenticated && !PUBLIC_PATHS.includes(location)) {
     setLocation("/login");
     return null;
   }
 
-  if (isAuthenticated && PUBLIC_PATHS.includes(location)) {
+  // Redirect authenticated users away from login/register
+  if (isAuthenticated && (location === "/login" || location === "/register")) {
     setLocation("/");
     return null;
   }
 
-  if (PUBLIC_PATHS.includes(location)) {
+  // Show public pages
+  if (location === "/login" || location === "/register") {
     return (
       <Switch>
         <Route path="/login" component={Login} />
@@ -56,6 +66,12 @@ function ProtectedApp() {
     );
   }
 
+  // Show email check screen for unverified users
+  if (isAuthenticated && !isVerified) {
+    return <CheckEmail />;
+  }
+
+  // Authenticated + verified — show the full app
   return (
     <SidebarProvider style={{ "--sidebar-width": "16rem", "--sidebar-width-icon": "3rem" } as React.CSSProperties}>
       <div className="flex h-screen w-full">

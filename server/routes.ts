@@ -1,10 +1,11 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { insertClientSchema, insertInvoiceSchema, insertScheduleSchema, insertSettingsSchema } from "@shared/schema";
 import multer from "multer";
-import { sendInvoiceEmail } from "./email";
+import { sendInvoiceEmail, sendVerificationEmail } from "./email";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -34,7 +35,7 @@ export async function registerRoutes(
   // ── Auth routes ────────────────────────────────────────────────────────────
 
   app.post("/api/auth/register", async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, businessName } = req.body;
     if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
     if (password.length < 6) return res.status(400).json({ message: "Password must be at least 6 characters" });
 
@@ -42,13 +43,57 @@ export async function registerRoutes(
     if (existing) return res.status(409).json({ message: "An account with this email already exists" });
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await storage.createUser({ email, passwordHash });
+    const user = await storage.createUser({ email, passwordHash, businessName: businessName || null });
 
     // First user to register claims any existing orphaned data
     await storage.claimOrphanedData(user.id);
 
+    // Save business name to settings if provided
+    if (businessName) {
+      await storage.upsertSettings(user.id, { businessName, businessEmail: email });
+    }
+
+    // Generate and send verification email
+    const token = crypto.randomBytes(32).toString("hex");
+    await storage.setVerificationToken(user.id, token);
+    const proto = req.headers["x-forwarded-proto"] || req.protocol;
+    const host = req.headers["x-forwarded-host"] || req.headers.host;
+    const verificationUrl = `${proto}://${host}/verify-email?token=${token}`;
+    sendVerificationEmail(email, verificationUrl).catch(err =>
+      console.error("[email] Verification email failed:", err)
+    );
+
     req.session.userId = user.id;
-    res.status(201).json({ id: user.id, email: user.email });
+    res.status(201).json({ id: user.id, email: user.email, emailVerified: false });
+  });
+
+  app.get("/api/auth/verify-email", async (req, res) => {
+    const { token } = req.query;
+    if (!token || typeof token !== "string") {
+      return res.status(400).json({ message: "Invalid token" });
+    }
+    const user = await storage.verifyUserByToken(token);
+    if (!user) return res.status(400).json({ message: "Invalid or expired verification link" });
+    // If user is logged in, update their session
+    if (req.session.userId === user.id) {
+      // session already set, just return success
+    }
+    res.json({ success: true, email: user.email });
+  });
+
+  app.post("/api/auth/resend-verification", async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+    const user = await storage.getUserById(req.session.userId);
+    if (!user) return res.status(401).json({ message: "Not authenticated" });
+    if (user.emailVerified) return res.status(400).json({ message: "Email already verified" });
+
+    const token = crypto.randomBytes(32).toString("hex");
+    await storage.setVerificationToken(user.id, token);
+    const proto = req.headers["x-forwarded-proto"] || req.protocol;
+    const host = req.headers["x-forwarded-host"] || req.headers.host;
+    const verificationUrl = `${proto}://${host}/verify-email?token=${token}`;
+    await sendVerificationEmail(user.email, verificationUrl);
+    res.json({ success: true });
   });
 
   app.post("/api/auth/login", async (req, res) => {
@@ -62,7 +107,7 @@ export async function registerRoutes(
     if (!valid) return res.status(401).json({ message: "Invalid email or password" });
 
     req.session.userId = user.id;
-    res.json({ id: user.id, email: user.email });
+    res.json({ id: user.id, email: user.email, emailVerified: user.emailVerified });
   });
 
   app.post("/api/auth/logout", (req, res) => {
@@ -75,7 +120,7 @@ export async function registerRoutes(
     if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
     const user = await storage.getUserById(req.session.userId);
     if (!user) return res.status(401).json({ message: "Not authenticated" });
-    res.json({ id: user.id, email: user.email });
+    res.json({ id: user.id, email: user.email, emailVerified: user.emailVerified });
   });
 
   // ── Clients ────────────────────────────────────────────────────────────────
