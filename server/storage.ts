@@ -16,6 +16,9 @@ export interface IStorage {
   createUser(data: InsertUser): Promise<User>;
   setVerificationToken(userId: string, token: string): Promise<void>;
   verifyUserByToken(token: string): Promise<User | undefined>;
+  setResetToken(userId: string, token: string, expiry: Date): Promise<void>;
+  getUserByResetToken(token: string): Promise<User | undefined>;
+  updatePassword(userId: string, passwordHash: string): Promise<void>;
   claimOrphanedData(userId: string): Promise<void>;
 
   // Clients
@@ -74,6 +77,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, user.id))
       .returning();
     return updated;
+  }
+  async setResetToken(userId: string, token: string, expiry: Date): Promise<void> {
+    await db.update(users).set({ resetToken: token, resetTokenExpiry: expiry }).where(eq(users.id, userId));
+  }
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.resetToken, token));
+    return user;
+  }
+  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    await db.update(users).set({ passwordHash, resetToken: null, resetTokenExpiry: null }).where(eq(users.id, userId));
   }
   async claimOrphanedData(userId: string): Promise<void> {
     await db.update(clients).set({ userId }).where(isNull(clients.userId));

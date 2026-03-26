@@ -9,6 +9,8 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   emailVerified: boolean("email_verified").notNull().default(false),
   verificationToken: text("verification_token"),
+  resetToken: text("reset_token"),
+  resetTokenExpiry: timestamp("reset_token_expiry"),
   businessName: text("business_name"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

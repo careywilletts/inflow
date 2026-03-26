@@ -5,7 +5,7 @@ import crypto from "crypto";
 import { storage } from "./storage";
 import { insertClientSchema, insertInvoiceSchema, insertScheduleSchema, insertSettingsSchema } from "@shared/schema";
 import multer from "multer";
-import { sendInvoiceEmail, sendVerificationEmail } from "./email";
+import { sendInvoiceEmail, sendVerificationEmail, sendPasswordResetEmail } from "./email";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -79,6 +79,41 @@ export async function registerRoutes(
       // session already set, just return success
     }
     res.json({ success: true, email: user.email });
+  });
+
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+    // Always return success to avoid revealing whether an account exists
+    const user = await storage.getUserByEmail(email);
+    if (user) {
+      const token = crypto.randomBytes(32).toString("hex");
+      const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      await storage.setResetToken(user.id, token, expiry);
+      const proto = req.headers["x-forwarded-proto"] || req.protocol;
+      const host = req.headers["x-forwarded-host"] || req.headers.host;
+      const resetUrl = `${proto}://${host}/reset-password?token=${token}`;
+      sendPasswordResetEmail(user.email, resetUrl).catch(err =>
+        console.error("[email] Password reset email failed:", err)
+      );
+    }
+    res.json({ success: true });
+  });
+
+  app.post("/api/auth/reset-password", async (req, res) => {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ message: "Token and password are required" });
+    if (password.length < 6) return res.status(400).json({ message: "Password must be at least 6 characters" });
+
+    const user = await storage.getUserByResetToken(token);
+    if (!user) return res.status(400).json({ message: "This reset link is invalid or has already been used" });
+    if (!user.resetTokenExpiry || new Date() > new Date(user.resetTokenExpiry)) {
+      return res.status(400).json({ message: "This reset link has expired. Please request a new one" });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    await storage.updatePassword(user.id, passwordHash);
+    res.json({ success: true });
   });
 
   app.post("/api/auth/resend-verification", async (req, res) => {

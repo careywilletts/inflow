@@ -18,9 +18,11 @@ import Login from "@/pages/login";
 import Register from "@/pages/register";
 import VerifyEmail from "@/pages/verify-email";
 import CheckEmail from "@/pages/check-email";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 import { useAuth } from "@/hooks/use-auth";
 
-const PUBLIC_PATHS = ["/login", "/register", "/verify-email"];
+const PUBLIC_PATHS = ["/login", "/register", "/verify-email", "/forgot-password", "/reset-password"];
 
 function ProtectedApp() {
   const [location, setLocation] = useLocation();
@@ -57,11 +59,13 @@ function ProtectedApp() {
   }
 
   // Show public pages
-  if (location === "/login" || location === "/register") {
+  if (PUBLIC_PATHS.includes(location)) {
     return (
       <Switch>
         <Route path="/login" component={Login} />
         <Route path="/register" component={Register} />
+        <Route path="/forgot-password" component={ForgotPassword} />
+        <Route path="/reset-password" component={ResetPassword} />
       </Switch>
     );
   }

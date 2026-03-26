@@ -115,6 +115,11 @@ export default function Login() {
                 Create one
               </Link>
             </p>
+            <p className="text-center text-sm text-muted-foreground mt-2">
+              <Link href="/forgot-password" className="text-muted-foreground hover:text-primary hover:underline text-xs" data-testid="link-forgot-password">
+                Forgot your password?
+              </Link>
+            </p>
           </CardContent>
         </Card>
       </div>
