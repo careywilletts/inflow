@@ -1,6 +1,6 @@
 import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Users, Clock, LayoutDashboard, Plus, Settings } from "lucide-react";
+import { FileText, Users, Clock, LayoutDashboard, Plus, Settings, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/hooks/use-auth";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -37,6 +38,7 @@ export function AppSidebar() {
   const { data: settings } = useQuery<OrgSettings>({
     queryKey: ["/api/settings"],
   });
+  const { user, logout } = useAuth();
 
   const handleNavClick = () => {
     if (isMobile) setOpenMobile(false);
@@ -100,7 +102,22 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="p-4 space-y-3">
+        {user && (
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground truncate min-w-0" data-testid="text-user-email">{user.email}</p>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={logout}
+              className="shrink-0 h-7 w-7 text-muted-foreground hover:text-foreground"
+              title="Sign out"
+              data-testid="button-logout"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        )}
         <p className="text-[10px] text-muted-foreground text-center uppercase tracking-widest font-medium">Inflow v1.0</p>
       </SidebarFooter>
     </Sidebar>

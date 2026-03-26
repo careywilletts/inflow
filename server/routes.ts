@@ -1,5 +1,6 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 import { insertClientSchema, insertInvoiceSchema, insertScheduleSchema, insertSettingsSchema } from "@shared/schema";
 import multer from "multer";
@@ -18,50 +19,111 @@ const upload = multer({
   },
 });
 
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "Unauthorised" });
+  }
+  next();
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
 
-  app.get("/api/clients", async (_req, res) => {
-    const clients = await storage.getClients();
-    res.json(clients);
+  // ── Auth routes ────────────────────────────────────────────────────────────
+
+  app.post("/api/auth/register", async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
+    if (password.length < 6) return res.status(400).json({ message: "Password must be at least 6 characters" });
+
+    const existing = await storage.getUserByEmail(email);
+    if (existing) return res.status(409).json({ message: "An account with this email already exists" });
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await storage.createUser({ email, passwordHash });
+
+    // First user to register claims any existing orphaned data
+    await storage.claimOrphanedData(user.id);
+
+    req.session.userId = user.id;
+    res.status(201).json({ id: user.id, email: user.email });
   });
 
-  app.get("/api/clients/:id", async (req, res) => {
+  app.post("/api/auth/login", async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
+
+    const user = await storage.getUserByEmail(email);
+    if (!user) return res.status(401).json({ message: "Invalid email or password" });
+
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) return res.status(401).json({ message: "Invalid email or password" });
+
+    req.session.userId = user.id;
+    res.json({ id: user.id, email: user.email });
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy(() => {
+      res.status(204).send();
+    });
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+    const user = await storage.getUserById(req.session.userId);
+    if (!user) return res.status(401).json({ message: "Not authenticated" });
+    res.json({ id: user.id, email: user.email });
+  });
+
+  // ── Clients ────────────────────────────────────────────────────────────────
+
+  app.get("/api/clients", requireAuth, async (req, res) => {
+    const data = await storage.getClients(req.session.userId!);
+    res.json(data);
+  });
+
+  app.get("/api/clients/:id", requireAuth, async (req, res) => {
     const client = await storage.getClient(req.params.id);
     if (!client) return res.status(404).json({ message: "Client not found" });
     res.json(client);
   });
 
-  app.post("/api/clients", async (req, res) => {
+  app.post("/api/clients", requireAuth, async (req, res) => {
     const parsed = insertClientSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
-    const client = await storage.createClient(parsed.data);
+    const client = await storage.createClient(req.session.userId!, parsed.data);
     res.status(201).json(client);
   });
 
-  app.patch("/api/clients/:id", async (req, res) => {
+  app.patch("/api/clients/:id", requireAuth, async (req, res) => {
     const client = await storage.updateClient(req.params.id, req.body);
     if (!client) return res.status(404).json({ message: "Client not found" });
     res.json(client);
   });
 
-  app.delete("/api/clients/:id", async (req, res) => {
+  app.delete("/api/clients/:id", requireAuth, async (req, res) => {
     await storage.nullifyClientReferences(req.params.id);
     await storage.deleteClient(req.params.id);
     res.status(204).send();
   });
 
-  app.get("/api/invoices", async (_req, res) => {
-    const invs = await storage.getInvoices();
+  // ── Invoices ───────────────────────────────────────────────────────────────
+
+  app.get("/api/invoices", requireAuth, async (req, res) => {
+    const invs = await storage.getInvoices(req.session.userId!);
     res.json(invs);
   });
 
-  app.get("/api/invoices/next-number", async (_req, res) => {
-    const [allInvoices, settings] = await Promise.all([storage.getInvoices(), storage.getSettings()]);
+  app.get("/api/invoices/next-number", requireAuth, async (req, res) => {
+    const [allInvoices, s] = await Promise.all([
+      storage.getInvoices(req.session.userId!),
+      storage.getSettings(req.session.userId!),
+    ]);
     const year = new Date().getFullYear();
-    const rawPrefix = (settings?.invoicePrefix || "INV").toUpperCase().trim();
+    const rawPrefix = (s?.invoicePrefix || "INV").toUpperCase().trim();
     const prefix = `${rawPrefix}-${year}-`;
     let maxSeq = 0;
     for (const inv of allInvoices) {
@@ -74,20 +136,20 @@ export async function registerRoutes(
     res.json({ invoiceNumber: `${prefix}${next}` });
   });
 
-  app.get("/api/invoices/:id", async (req, res) => {
+  app.get("/api/invoices/:id", requireAuth, async (req, res) => {
     const inv = await storage.getInvoice(req.params.id);
     if (!inv) return res.status(404).json({ message: "Invoice not found" });
     res.json(inv);
   });
 
-  app.post("/api/invoices", async (req, res) => {
+  app.post("/api/invoices", requireAuth, async (req, res) => {
     const parsed = insertInvoiceSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
-    const inv = await storage.createInvoice(parsed.data);
+    const inv = await storage.createInvoice(req.session.userId!, parsed.data);
     res.status(201).json(inv);
   });
 
-  app.patch("/api/invoices/:id", async (req, res) => {
+  app.patch("/api/invoices/:id", requireAuth, async (req, res) => {
     const existing = await storage.getInvoice(req.params.id);
     const body = { ...req.body };
     if (body.issueDate) body.issueDate = new Date(body.issueDate);
@@ -96,12 +158,12 @@ export async function registerRoutes(
     if (!inv) return res.status(404).json({ message: "Invoice not found" });
 
     if (req.body.status === "sent" && existing?.status !== "sent") {
-      const [clients, settings] = await Promise.all([
-        storage.getClients(),
-        storage.getSettings(),
+      const [allClients, s] = await Promise.all([
+        storage.getClients(req.session.userId!),
+        storage.getSettings(req.session.userId!),
       ]);
-      const client = inv.clientId ? clients.find(c => c.id === inv.clientId) : undefined;
-      sendInvoiceEmail(inv, client, settings).then(result => {
+      const client = inv.clientId ? allClients.find(c => c.id === inv.clientId) : undefined;
+      sendInvoiceEmail(inv, client, s).then(result => {
         if (!result.success) {
           console.error("[email] Invoice email failed:", result.error);
         } else {
@@ -113,54 +175,64 @@ export async function registerRoutes(
     res.json(inv);
   });
 
-  app.delete("/api/invoices/:id", async (req, res) => {
+  app.delete("/api/invoices/:id", requireAuth, async (req, res) => {
     await storage.deleteSchedulesByInvoiceId(req.params.id);
     await storage.deleteInvoice(req.params.id);
     res.status(204).send();
   });
 
-  app.get("/api/schedules", async (_req, res) => {
-    const scheds = await storage.getSchedules();
+  // ── Schedules ──────────────────────────────────────────────────────────────
+
+  app.get("/api/schedules", requireAuth, async (req, res) => {
+    const scheds = await storage.getSchedules(req.session.userId!);
     res.json(scheds);
   });
 
-  app.get("/api/schedules/:id", async (req, res) => {
+  app.get("/api/schedules/:id", requireAuth, async (req, res) => {
     const sched = await storage.getSchedule(req.params.id);
     if (!sched) return res.status(404).json({ message: "Schedule not found" });
     res.json(sched);
   });
 
-  app.post("/api/schedules", async (req, res) => {
+  app.post("/api/schedules", requireAuth, async (req, res) => {
     const parsed = insertScheduleSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
-    const sched = await storage.createSchedule(parsed.data);
+    const sched = await storage.createSchedule(req.session.userId!, parsed.data);
     res.status(201).json(sched);
   });
 
-  app.patch("/api/schedules/:id", async (req, res) => {
+  app.patch("/api/schedules/:id", requireAuth, async (req, res) => {
     const sched = await storage.updateSchedule(req.params.id, req.body);
     if (!sched) return res.status(404).json({ message: "Schedule not found" });
     res.json(sched);
   });
 
-  app.delete("/api/schedules/:id", async (req, res) => {
+  app.delete("/api/schedules/:id", requireAuth, async (req, res) => {
     await storage.deleteSchedule(req.params.id);
     res.status(204).send();
   });
 
-  app.get("/api/settings", async (_req, res) => {
-    const s = await storage.getSettings();
-    res.json(s || { id: null, logoUrl: null, businessName: null, businessEmail: null, businessAddress: null, ccEmail1: null, ccEmail2: null, vatNumber: null, bankName: null, accountName: null, sortCode: null, accountNumber: null, invoicePrefix: null });
+  // ── Settings ───────────────────────────────────────────────────────────────
+
+  app.get("/api/settings", requireAuth, async (req, res) => {
+    const s = await storage.getSettings(req.session.userId!);
+    res.json(s || {
+      id: null, userId: req.session.userId,
+      logoUrl: null, businessName: null, businessEmail: null,
+      businessAddress: null, ccEmail1: null, ccEmail2: null,
+      vatNumber: null, bankName: null, accountName: null,
+      sortCode: null, accountNumber: null, invoicePrefix: null
+    });
   });
 
-  app.put("/api/settings", async (req, res) => {
+  app.put("/api/settings", requireAuth, async (req, res) => {
     const parsed = insertSettingsSchema.partial().safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
-    const s = await storage.upsertSettings(parsed.data);
+    const s = await storage.upsertSettings(req.session.userId!, parsed.data);
     res.json(s);
   });
 
-  app.post("/api/settings/logo", (req, res, next) => {
+  app.post("/api/settings/logo", requireAuth, (req, res, next) => {
     upload.single("logo")(req, res, (err) => {
       if (err) return res.status(400).json({ message: err.message });
       next();
@@ -169,12 +241,12 @@ export async function registerRoutes(
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
     const base64 = req.file.buffer.toString("base64");
     const logoUrl = `data:${req.file.mimetype};base64,${base64}`;
-    const s = await storage.upsertSettings({ logoUrl });
+    const s = await storage.upsertSettings(req.session.userId!, { logoUrl });
     res.json(s);
   });
 
-  app.delete("/api/settings/logo", async (_req, res) => {
-    const s = await storage.upsertSettings({ logoUrl: null });
+  app.delete("/api/settings/logo", requireAuth, async (req, res) => {
+    const s = await storage.upsertSettings(req.session.userId!, { logoUrl: null });
     res.json(s);
   });
 

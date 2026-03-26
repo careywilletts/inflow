@@ -4,6 +4,14 @@
 Inflow is a business invoice management application that helps users design, create, and automate invoices. It supports scheduling invoices on weekly, monthly, or yearly basis. Built as a PWA for iOS/Android installability. Default currency is GBP with 20% VAT.
 
 ## Recent Changes
+- 2026-03-26: Added multi-user authentication — each business signs up with their own account and has fully isolated data (clients, invoices, schedules, settings). Existing data is automatically claimed by the first user to register. Login/register pages added, session-based auth with bcrypt password hashing.
+
+## Authentication
+- **Status**: CONFIGURED — email/password auth with express-session + connect-pg-simple (sessions stored in DB)
+- **Packages**: bcryptjs, express-session, connect-pg-simple
+- **Routes**: POST /api/auth/register, POST /api/auth/login, POST /api/auth/logout, GET /api/auth/me
+- **Frontend**: /login and /register pages; useAuth hook; all routes protected; logout button in sidebar footer
+- **Data isolation**: All storage methods accept userId; orphaned data (from before auth was added) is claimed by first user to register
 - 2026-03-22: Logo now stored as base64 data URL in DB (persists across deployments)
 - 2026-03-22: Mobile sidebar auto-closes when a nav item is tapped
 - 2026-03-22: Invoice number prefix customisable via Settings (e.g. BFS → BFS-2026-001)

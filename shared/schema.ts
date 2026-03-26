@@ -3,8 +3,20 @@ import { pgTable, text, varchar, integer, numeric, boolean, timestamp, jsonb } f
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+
 export const clients = pgTable("clients", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
   name: text("name").notNull(),
   email: text("email").notNull(),
   company: text("company"),
@@ -13,7 +25,7 @@ export const clients = pgTable("clients", {
   notes: text("notes"),
 });
 
-export const insertClientSchema = createInsertSchema(clients).omit({ id: true });
+export const insertClientSchema = createInsertSchema(clients).omit({ id: true, userId: true });
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
 
@@ -27,6 +39,7 @@ export type LineItem = z.infer<typeof lineItemSchema>;
 
 export const invoices = pgTable("invoices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
   invoiceNumber: text("invoice_number").notNull(),
   clientId: varchar("client_id").references(() => clients.id),
   status: text("status").notNull().default("draft"),
@@ -44,7 +57,7 @@ export const invoices = pgTable("invoices", {
   currency: text("currency").notNull().default("GBP"),
 });
 
-export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true }).extend({
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, userId: true }).extend({
   lineItems: z.array(lineItemSchema).min(1, "At least one line item is required"),
   dueDate: z.coerce.date(),
   issueDate: z.coerce.date(),
@@ -54,6 +67,7 @@ export type Invoice = typeof invoices.$inferSelect;
 
 export const schedules = pgTable("schedules", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
   invoiceId: varchar("invoice_id").references(() => invoices.id),
   clientId: varchar("client_id").references(() => clients.id),
   frequency: text("frequency").notNull(),
@@ -62,7 +76,7 @@ export const schedules = pgTable("schedules", {
   lastSentDate: timestamp("last_sent_date"),
 });
 
-export const insertScheduleSchema = createInsertSchema(schedules).omit({ id: true }).extend({
+export const insertScheduleSchema = createInsertSchema(schedules).omit({ id: true, userId: true }).extend({
   nextSendDate: z.coerce.date(),
   lastSentDate: z.coerce.date().optional().nullable(),
 });
@@ -71,6 +85,7 @@ export type Schedule = typeof schedules.$inferSelect;
 
 export const settings = pgTable("settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).unique(),
   logoUrl: text("logo_url"),
   businessName: text("business_name"),
   businessEmail: text("business_email"),
@@ -85,6 +100,6 @@ export const settings = pgTable("settings", {
   invoicePrefix: text("invoice_prefix"),
 });
 
-export const insertSettingsSchema = createInsertSchema(settings).omit({ id: true });
+export const insertSettingsSchema = createInsertSchema(settings).omit({ id: true, userId: true });
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
