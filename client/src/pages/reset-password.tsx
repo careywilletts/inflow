@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, Link } from "wouter";
+import { Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -10,7 +10,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
 
 export default function ResetPassword() {
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [token, setToken] = useState("");
   const [password, setPassword] = useState("");

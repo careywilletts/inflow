@@ -22,7 +22,11 @@ import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import { useAuth } from "@/hooks/use-auth";
 
-const PUBLIC_PATHS = ["/login", "/register", "/verify-email", "/forgot-password", "/reset-password"];
+const PUBLIC_PREFIXES = ["/login", "/register", "/verify-email", "/forgot-password", "/reset-password"];
+
+function isPublicPath(location: string) {
+  return PUBLIC_PREFIXES.some(p => location === p || location.startsWith(p + "?"));
+}
 
 function ProtectedApp() {
   const [location, setLocation] = useLocation();
@@ -42,12 +46,12 @@ function ProtectedApp() {
   }
 
   // Allow verify-email page always (token-based, no session needed)
-  if (location === "/verify-email") {
+  if (location.startsWith("/verify-email")) {
     return <VerifyEmail />;
   }
 
   // Redirect unauthenticated users to login
-  if (!isAuthenticated && !PUBLIC_PATHS.includes(location)) {
+  if (!isAuthenticated && !isPublicPath(location)) {
     setLocation("/login");
     return null;
   }
@@ -59,7 +63,7 @@ function ProtectedApp() {
   }
 
   // Show public pages
-  if (PUBLIC_PATHS.includes(location)) {
+  if (isPublicPath(location)) {
     return (
       <Switch>
         <Route path="/login" component={Login} />

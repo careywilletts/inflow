@@ -64,7 +64,9 @@ export async function registerRoutes(
     );
 
     req.session.userId = user.id;
-    res.status(201).json({ id: user.id, email: user.email, emailVerified: false });
+    req.session.save(() => {
+      res.status(201).json({ id: user.id, email: user.email, emailVerified: false });
+    });
   });
 
   app.get("/api/auth/verify-email", async (req, res) => {
@@ -142,7 +144,9 @@ export async function registerRoutes(
     if (!valid) return res.status(401).json({ message: "Invalid email or password" });
 
     req.session.userId = user.id;
-    res.json({ id: user.id, email: user.email, emailVerified: user.emailVerified });
+    req.session.save(() => {
+      res.json({ id: user.id, email: user.email, emailVerified: user.emailVerified });
+    });
   });
 
   app.post("/api/auth/logout", (req, res) => {
