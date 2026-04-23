@@ -5,6 +5,7 @@ import pg from "pg";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { startScheduler } from "./scheduler";
 
 const app = express();
 const httpServer = createServer(app);
@@ -142,6 +143,7 @@ async function runMigrations() {
 (async () => {
   await runMigrations();
   await registerRoutes(httpServer, app);
+  startScheduler();
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

@@ -7,7 +7,7 @@ import {
   clients, invoices, schedules, settings, users
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, isNull, or } from "drizzle-orm";
+import { eq, desc, isNull, lte, and } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -39,6 +39,7 @@ export interface IStorage {
   // Schedules
   getSchedules(userId: string): Promise<Schedule[]>;
   getSchedule(id: string): Promise<Schedule | undefined>;
+  getDueSchedules(): Promise<Schedule[]>;
   createSchedule(userId: string, data: InsertSchedule): Promise<Schedule>;
   updateSchedule(id: string, data: Partial<InsertSchedule>): Promise<Schedule | undefined>;
   deleteSchedule(id: string): Promise<void>;
@@ -146,6 +147,12 @@ export class DatabaseStorage implements IStorage {
   async getSchedule(id: string): Promise<Schedule | undefined> {
     const [schedule] = await db.select().from(schedules).where(eq(schedules.id, id));
     return schedule;
+  }
+  async getDueSchedules(): Promise<Schedule[]> {
+    const now = new Date();
+    return db.select().from(schedules).where(
+      and(eq(schedules.isActive, true), lte(schedules.nextSendDate, now))
+    );
   }
   async createSchedule(userId: string, data: InsertSchedule): Promise<Schedule> {
     const [schedule] = await db.insert(schedules).values({ ...data as any, userId }).returning();
