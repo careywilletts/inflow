@@ -93,7 +93,7 @@ export default function Dashboard() {
 
   const totalRevenue = invoices?.filter(i => i.status === "paid").reduce((sum, i) => sum + Number(i.total), 0) ?? 0;
   const pendingAmount = invoices?.filter(i => i.status === "sent").reduce((sum, i) => sum + Number(i.total), 0) ?? 0;
-  const recentInvoices = invoices?.slice(0, 5) ?? [];
+  const recentInvoices = invoices ? [...invoices].reverse().slice(0, 5) : [];
   const activeSchedules = schedulesData?.filter(s => s.isActive).length ?? 0;
   const loading = loadingInvoices || loadingClients || loadingSchedules;
 

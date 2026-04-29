@@ -132,6 +132,12 @@ async function runMigrations() {
       ALTER TABLE settings ADD COLUMN IF NOT EXISTS user_id VARCHAR REFERENCES users(id) UNIQUE;
     `);
 
+    // Ensure invoice numbers are unique per user (prevents duplicates)
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS invoices_user_invoice_number_unique
+      ON invoices (user_id, invoice_number);
+    `);
+
     log("Database migration complete", "migrate");
   } catch (err) {
     log(`Migration error: ${err}`, "migrate");

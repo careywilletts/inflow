@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, numeric, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, numeric, boolean, timestamp, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -60,7 +60,9 @@ export const invoices = pgTable("invoices", {
   fromEmail: text("from_email"),
   fromAddress: text("from_address"),
   currency: text("currency").notNull().default("GBP"),
-});
+}, (table) => ({
+  uniqueUserInvoiceNumber: uniqueIndex("invoices_user_invoice_number_unique").on(table.userId, table.invoiceNumber),
+}));
 
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, userId: true }).extend({
   lineItems: z.array(lineItemSchema).min(1, "At least one line item is required"),
