@@ -4,16 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { Plus, CalendarClock, Pause, Play, Trash2, Pencil } from "lucide-react";
-import type { Schedule, Invoice, Client } from "@shared/schema";
+import { Plus, CalendarClock, Pause, Play, Trash2, Pencil, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
+import type { Schedule, Invoice, Client, LineItem } from "@shared/schema";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
+
+function formatCurrency(amount: number | string, currency = "GBP") {
+  const locale = currency === "GBP" ? "en-GB" : currency === "EUR" ? "de-DE" : "en-US";
+  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(Number(amount));
+}
 
 export default function Schedules() {
   const { data: schedulesData, isLoading } = useQuery<Schedule[]>({ queryKey: ["/api/schedules"] });
@@ -21,6 +27,8 @@ export default function Schedules() {
   const { data: clients } = useQuery<Client[]>({ queryKey: ["/api/clients"] });
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const [selectedInvoiceId, setSelectedInvoiceId] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -85,6 +93,7 @@ export default function Schedules() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      setExpandedId(null);
       toast({ title: "Schedule deleted" });
     },
     onError: (error: Error) => {
@@ -108,7 +117,8 @@ export default function Schedules() {
     },
   });
 
-  const openEdit = (schedule: Schedule) => {
+  const openEdit = (schedule: Schedule, e: React.MouseEvent) => {
+    e.stopPropagation();
     setEditingSchedule(schedule);
     setEditInvoiceId(schedule.invoiceId || "");
     setEditClientId(schedule.clientId || "");
@@ -252,10 +262,23 @@ export default function Schedules() {
           {schedulesData.map(schedule => {
             const inv = schedule.invoiceId ? invoiceMap.get(schedule.invoiceId) : undefined;
             const cl = schedule.clientId ? clientMap.get(schedule.clientId) : undefined;
+            const isExpanded = expandedId === schedule.id;
+            const lineItems = (inv?.lineItems || []) as LineItem[];
+            const currency = inv?.currency || "GBP";
+
             return (
-              <Card key={schedule.id} className="hover-elevate" data-testid={`card-schedule-${schedule.id}`}>
-                <CardContent className="p-5">
-                  <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
+              <Card
+                key={schedule.id}
+                className={`transition-all duration-200 ${isExpanded ? "ring-2 ring-primary/30" : "hover-elevate cursor-pointer"}`}
+                data-testid={`card-schedule-${schedule.id}`}
+              >
+                {/* Header row — always visible, click to expand */}
+                <CardContent className="p-0">
+                  <div
+                    className="flex items-center justify-between gap-3 p-5 cursor-pointer select-none"
+                    onClick={() => setExpandedId(isExpanded ? null : schedule.id)}
+                    data-testid={`button-expand-schedule-${schedule.id}`}
+                  >
                     <div className="flex items-center gap-4 min-w-0">
                       <div className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${
                         schedule.isActive ? "bg-primary/10" : "bg-muted"
@@ -267,61 +290,157 @@ export default function Schedules() {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-medium" data-testid={`text-schedule-invoice-${schedule.id}`}>
-                            {inv?.invoiceNumber || "Unknown Invoice"}
+                          <p className="font-semibold" data-testid={`text-schedule-invoice-${schedule.id}`}>
+                            {cl?.name || "Unknown Client"}
                           </p>
                           <Badge variant={schedule.isActive ? "default" : "secondary"} className="text-xs">
                             {schedule.isActive ? "Active" : "Paused"}
                           </Badge>
+                          <Badge variant="outline" className="text-xs font-normal">
+                            {frequencyLabel(schedule.frequency)}
+                          </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {cl?.name || "Unknown Client"} &middot; {frequencyLabel(schedule.frequency)}
-                        </p>
+                        <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                          <p className="text-sm text-muted-foreground">
+                            Template: <span className="text-foreground font-medium">{inv?.invoiceNumber || "—"}</span>
+                          </p>
+                          {inv && (
+                            <p className="text-sm text-muted-foreground">
+                              Total: <span className="text-foreground font-medium">{formatCurrency(inv.total, currency)}</span>
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <div className="text-right">
+
+                    <div className="flex items-center gap-4 shrink-0">
+                      <div className="text-right hidden sm:block">
                         <p className="text-xs text-muted-foreground">Next Send</p>
-                        <p className="text-sm font-medium tabular-nums">
-                          {format(new Date(schedule.nextSendDate), "MMM d, yyyy")}
+                        <p className="text-sm font-semibold tabular-nums">
+                          {format(new Date(schedule.nextSendDate), "d MMM yyyy")}
                         </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => openEdit(schedule)}
-                        data-testid={`button-edit-schedule-${schedule.id}`}
-                        title="Edit schedule"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5"
-                        onClick={() => toggleMutation.mutate({ id: schedule.id, isActive: !schedule.isActive })}
-                        disabled={toggleMutation.isPending}
-                        data-testid={`button-toggle-schedule-${schedule.id}`}
-                      >
-                        {schedule.isActive
-                          ? <><Pause className="w-3.5 h-3.5" /> Pause</>
-                          : <><Play className="w-3.5 h-3.5" /> Resume</>
-                        }
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => deleteMutation.mutate(schedule.id)}
-                        disabled={deleteMutation.isPending}
-                        data-testid={`button-delete-schedule-${schedule.id}`}
-                        title="Delete schedule"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {isExpanded
+                        ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
+                        : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                      }
                     </div>
                   </div>
+
+                  {/* Expanded detail panel */}
+                  {isExpanded && (
+                    <>
+                      <Separator />
+                      <div className="p-5 space-y-5">
+
+                        {/* Next send (mobile) */}
+                        <div className="sm:hidden">
+                          <p className="text-xs text-muted-foreground mb-0.5">Next Send</p>
+                          <p className="text-sm font-semibold">{format(new Date(schedule.nextSendDate), "d MMM yyyy")}</p>
+                        </div>
+
+                        {/* Line items from invoice template */}
+                        {lineItems.length > 0 ? (
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Invoice Template — Line Items</p>
+                            <div className="rounded-md border-2 border-border overflow-hidden">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="bg-muted/50 text-left">
+                                    <th className="px-3 py-2 font-medium text-muted-foreground">Item</th>
+                                    <th className="px-3 py-2 font-medium text-muted-foreground text-center w-16">Qty</th>
+                                    <th className="px-3 py-2 font-medium text-muted-foreground text-right w-24">Rate</th>
+                                    <th className="px-3 py-2 font-medium text-muted-foreground text-right w-24">Amount</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {lineItems.map((item, i) => (
+                                    <tr key={i} className="border-t border-border">
+                                      <td className="px-3 py-2.5">
+                                        <p className="font-medium">{item.name || item.description || "—"}</p>
+                                        {item.name && item.description && (
+                                          <p className="text-xs text-muted-foreground">{item.description}</p>
+                                        )}
+                                      </td>
+                                      <td className="px-3 py-2.5 text-center tabular-nums">{item.quantity}</td>
+                                      <td className="px-3 py-2.5 text-right tabular-nums">{formatCurrency(item.rate, currency)}</td>
+                                      <td className="px-3 py-2.5 text-right tabular-nums font-medium">{formatCurrency(item.quantity * item.rate, currency)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              <div className="border-t border-border bg-muted/30 px-3 py-2.5 flex flex-col items-end gap-1 text-sm">
+                                {inv?.subtotal && (
+                                  <div className="flex gap-6">
+                                    <span className="text-muted-foreground">Subtotal</span>
+                                    <span className="tabular-nums w-24 text-right">{formatCurrency(inv.subtotal, currency)}</span>
+                                  </div>
+                                )}
+                                {inv?.taxAmount && Number(inv.taxAmount) > 0 && (
+                                  <div className="flex gap-6">
+                                    <span className="text-muted-foreground">VAT ({inv.taxRate}%)</span>
+                                    <span className="tabular-nums w-24 text-right">{formatCurrency(inv.taxAmount, currency)}</span>
+                                  </div>
+                                )}
+                                <div className="flex gap-6 font-semibold">
+                                  <span>Total</span>
+                                  <span className="tabular-nums w-24 text-right">{formatCurrency(inv?.total || 0, currency)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No invoice template selected.</p>
+                        )}
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-2 flex-wrap pt-1">
+                          {inv && (
+                            <Link href={`/invoices/${inv.id}/edit`}>
+                              <Button variant="outline" size="sm" className="gap-1.5" data-testid={`button-edit-invoice-${schedule.id}`}>
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Edit Invoice Template
+                              </Button>
+                            </Link>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={(e) => openEdit(schedule, e)}
+                            data-testid={`button-edit-schedule-${schedule.id}`}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            Edit Schedule
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={(e) => { e.stopPropagation(); toggleMutation.mutate({ id: schedule.id, isActive: !schedule.isActive }); }}
+                            disabled={toggleMutation.isPending}
+                            data-testid={`button-toggle-schedule-${schedule.id}`}
+                          >
+                            {schedule.isActive
+                              ? <><Pause className="w-3.5 h-3.5" /> Pause</>
+                              : <><Play className="w-3.5 h-3.5" /> Resume</>
+                            }
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1.5 text-muted-foreground hover:text-destructive ml-auto"
+                            onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(schedule.id); }}
+                            disabled={deleteMutation.isPending}
+                            data-testid={`button-delete-schedule-${schedule.id}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             );
