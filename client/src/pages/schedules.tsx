@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { Clock, Plus, CalendarClock, Pause, Play, Trash2 } from "lucide-react";
+import { Plus, CalendarClock, Pause, Play, Trash2, Pencil } from "lucide-react";
 import type { Schedule, Invoice, Client } from "@shared/schema";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
@@ -26,6 +26,13 @@ export default function Schedules() {
   const [selectedClientId, setSelectedClientId] = useState("");
   const [selectedFrequency, setSelectedFrequency] = useState("");
   const [nextSendDate, setNextSendDate] = useState("");
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
+  const [editInvoiceId, setEditInvoiceId] = useState("");
+  const [editClientId, setEditClientId] = useState("");
+  const [editFrequency, setEditFrequency] = useState("");
+  const [editNextDate, setEditNextDate] = useState("");
 
   const invoiceMap = useMemo(() => {
     const map = new Map<string, Invoice>();
@@ -84,6 +91,45 @@ export default function Schedules() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
+
+  const editMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PATCH", `/api/schedules/${editingSchedule!.id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      setEditOpen(false);
+      setEditingSchedule(null);
+      toast({ title: "Schedule updated" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const openEdit = (schedule: Schedule) => {
+    setEditingSchedule(schedule);
+    setEditInvoiceId(schedule.invoiceId || "");
+    setEditClientId(schedule.clientId || "");
+    setEditFrequency(schedule.frequency);
+    setEditNextDate(format(new Date(schedule.nextSendDate), "yyyy-MM-dd"));
+    setEditOpen(true);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editInvoiceId || !editClientId || !editFrequency || !editNextDate) {
+      toast({ title: "Missing fields", description: "Please fill in all required fields.", variant: "destructive" });
+      return;
+    }
+    editMutation.mutate({
+      invoiceId: editInvoiceId,
+      clientId: editClientId,
+      frequency: editFrequency,
+      nextSendDate: new Date(editNextDate).toISOString(),
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,6 +287,16 @@ export default function Schedules() {
                         </p>
                       </div>
                       <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => openEdit(schedule)}
+                        data-testid={`button-edit-schedule-${schedule.id}`}
+                        title="Edit schedule"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
                         variant="outline"
                         size="sm"
                         className="gap-1.5"
@@ -272,6 +328,73 @@ export default function Schedules() {
           })}
         </div>
       )}
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Schedule</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Invoice Template *</Label>
+              <Select value={editInvoiceId} onValueChange={setEditInvoiceId}>
+                <SelectTrigger data-testid="select-edit-invoice">
+                  <SelectValue placeholder="Select an invoice" />
+                </SelectTrigger>
+                <SelectContent>
+                  {invoices?.map(inv => (
+                    <SelectItem key={inv.id} value={inv.id}>{inv.invoiceNumber}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Client *</Label>
+              <Select value={editClientId} onValueChange={setEditClientId}>
+                <SelectTrigger data-testid="select-edit-client">
+                  <SelectValue placeholder="Select a client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients?.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Frequency *</Label>
+              <Select value={editFrequency} onValueChange={setEditFrequency}>
+                <SelectTrigger data-testid="select-edit-frequency">
+                  <SelectValue placeholder="Select frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="yearly">Yearly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Next Send Date *</Label>
+              <Input
+                type="date"
+                value={editNextDate}
+                onChange={e => setEditNextDate(e.target.value)}
+                data-testid="input-edit-date"
+              />
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline" data-testid="button-cancel-edit-schedule">Cancel</Button>
+              </DialogClose>
+              <Button type="submit" disabled={editMutation.isPending} data-testid="button-save-edit-schedule">
+                {editMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
