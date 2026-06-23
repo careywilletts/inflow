@@ -286,7 +286,10 @@ export async function registerRoutes(
   });
 
   app.patch("/api/schedules/:id", requireAuth, async (req, res) => {
-    const sched = await storage.updateSchedule(req.params.id, req.body);
+    const body = { ...req.body };
+    if (body.nextSendDate) body.nextSendDate = new Date(body.nextSendDate);
+    if (body.lastSentDate) body.lastSentDate = new Date(body.lastSentDate);
+    const sched = await storage.updateSchedule(req.params.id, body);
     if (!sched) return res.status(404).json({ message: "Schedule not found" });
     res.json(sched);
   });
