@@ -119,6 +119,8 @@ async function runMigrations() {
         email VARCHAR,
         company VARCHAR,
         address TEXT,
+        phone VARCHAR,
+        notes TEXT,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
@@ -191,6 +193,11 @@ async function runMigrations() {
     await client.query(`
       ALTER TABLE settings ADD COLUMN IF NOT EXISTS user_id VARCHAR REFERENCES users(id) UNIQUE;
     `);
+
+    await client.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS phone VARCHAR;`);
+    await client.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS notes TEXT;`);
+    await client.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS cc_email_1 VARCHAR;`);
+    await client.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS cc_email_2 VARCHAR;`);
 
     await client.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS invoices_user_invoice_number_unique
