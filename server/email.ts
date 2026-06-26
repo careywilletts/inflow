@@ -10,6 +10,10 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+function esc(s: string | null | undefined): string {
+  return (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 function formatCurrency(amount: number, currency: string = "GBP"): string {
   const locale = currency === "GBP" ? "en-GB" : currency === "EUR" ? "de-DE" : "en-US";
   return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
@@ -23,8 +27,8 @@ function buildInvoiceHtml(invoice: Invoice, client: Client | undefined, settings
   const lineItemRows = lineItems.map(item => `
     <tr>
       <td style="padding: 10px 12px; border-bottom: 1px solid #e8e4d9;">
-        <strong>${item.name || item.description || "Item"}</strong>
-        ${item.name && item.description ? `<br><span style="color:#7a7565;font-size:13px;">${item.description}</span>` : ""}
+        <strong>${esc(item.name || item.description || "Item")}</strong>
+        ${item.name && item.description ? `<br><span style="color:#7a7565;font-size:13px;">${esc(item.description)}</span>` : ""}
       </td>
       <td style="padding: 10px 12px; border-bottom: 1px solid #e8e4d9; text-align: right; white-space: nowrap;">${item.quantity}</td>
       <td style="padding: 10px 12px; border-bottom: 1px solid #e8e4d9; text-align: right; white-space: nowrap;">${formatCurrency(Number(item.rate), invoice.currency)}</td>
@@ -47,13 +51,13 @@ function buildInvoiceHtml(invoice: Invoice, client: Client | undefined, settings
       <div style="display:flex;align-items:center;gap:14px;">
         ${logoSrc ? `<img src="${logoSrc}" alt="Logo" style="width:48px;height:48px;object-fit:contain;border-radius:50%;border:2px solid #7a8c3a;">` : `<div style="width:48px;height:48px;border-radius:50%;background:#e8d5cc;border:2px solid #7a8c3a;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#7a8c3a;">IN</div>`}
         <div>
-          <div style="font-weight:700;font-size:18px;letter-spacing:-0.5px;">${businessName}</div>
-          ${settings?.vatNumber ? `<div style="font-size:12px;color:#7a7565;">VAT: ${settings.vatNumber}</div>` : ""}
+          <div style="font-weight:700;font-size:18px;letter-spacing:-0.5px;">${esc(businessName)}</div>
+          ${settings?.vatNumber ? `<div style="font-size:12px;color:#7a7565;">VAT: ${esc(settings.vatNumber)}</div>` : ""}
         </div>
       </div>
       <div style="text-align:right;">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#7a7565;">Invoice</div>
-        <div style="font-size:20px;font-weight:700;letter-spacing:-0.5px;">${invoice.invoiceNumber}</div>
+        <div style="font-size:20px;font-weight:700;letter-spacing:-0.5px;">${esc(invoice.invoiceNumber)}</div>
       </div>
     </div>
 
@@ -61,17 +65,17 @@ function buildInvoiceHtml(invoice: Invoice, client: Client | undefined, settings
     <div style="padding:24px 32px;border-bottom:2px solid #e8e4d9;display:grid;grid-template-columns:1fr 1fr;gap:24px;">
       <div>
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#7a7565;margin-bottom:6px;">From</div>
-        <div style="font-weight:600;">${invoice.fromName || businessName}</div>
-        ${invoice.fromEmail ? `<div style="color:#7a7565;font-size:14px;">${invoice.fromEmail}</div>` : ""}
-        ${invoice.fromAddress ? `<div style="color:#7a7565;font-size:14px;white-space:pre-line;">${invoice.fromAddress}</div>` : ""}
+        <div style="font-weight:600;">${esc(invoice.fromName || businessName)}</div>
+        ${invoice.fromEmail ? `<div style="color:#7a7565;font-size:14px;">${esc(invoice.fromEmail)}</div>` : ""}
+        ${invoice.fromAddress ? `<div style="color:#7a7565;font-size:14px;white-space:pre-line;">${esc(invoice.fromAddress)}</div>` : ""}
       </div>
       <div>
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#7a7565;margin-bottom:6px;">To</div>
         ${client ? `
-          <div style="font-weight:600;">${client.name}</div>
-          ${client.company ? `<div style="color:#7a7565;font-size:14px;">${client.company}</div>` : ""}
-          <div style="color:#7a7565;font-size:14px;">${client.email}</div>
-          ${client.address ? `<div style="color:#7a7565;font-size:14px;white-space:pre-line;">${client.address}</div>` : ""}
+          <div style="font-weight:600;">${esc(client.name)}</div>
+          ${client.company ? `<div style="color:#7a7565;font-size:14px;">${esc(client.company)}</div>` : ""}
+          <div style="color:#7a7565;font-size:14px;">${esc(client.email)}</div>
+          ${client.address ? `<div style="color:#7a7565;font-size:14px;white-space:pre-line;">${esc(client.address)}</div>` : ""}
         ` : "<div style='color:#7a7565;font-size:14px;'>No client assigned</div>"}
       </div>
     </div>
@@ -126,7 +130,7 @@ function buildInvoiceHtml(invoice: Invoice, client: Client | undefined, settings
     ${invoice.notes ? `
     <div style="padding:16px 32px;border-top:2px solid #e8e4d9;">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#7a7565;margin-bottom:6px;">Notes</div>
-      <div style="font-size:14px;color:#7a7565;white-space:pre-line;">${invoice.notes}</div>
+      <div style="font-size:14px;color:#7a7565;white-space:pre-line;">${esc(invoice.notes)}</div>
     </div>
     ` : ""}
 
@@ -134,10 +138,10 @@ function buildInvoiceHtml(invoice: Invoice, client: Client | undefined, settings
     <div style="padding:16px 32px;border-top:2px solid #e8e4d9;background:#f0ece0;">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#7a7565;margin-bottom:6px;">Bank Details</div>
       <div style="font-size:14px;">
-        ${settings.bankName ? `<span style="font-weight:600;">${settings.bankName}</span>` : ""}
-        ${settings.accountName ? ` &middot; ${settings.accountName}` : ""}
-        ${settings.sortCode ? `<br>Sort Code: ${settings.sortCode}` : ""}
-        ${settings.accountNumber ? ` &middot; Account: ${settings.accountNumber}` : ""}
+        ${settings.bankName ? `<span style="font-weight:600;">${esc(settings.bankName)}</span>` : ""}
+        ${settings.accountName ? ` &middot; ${esc(settings.accountName)}` : ""}
+        ${settings.sortCode ? `<br>Sort Code: ${esc(settings.sortCode)}` : ""}
+        ${settings.accountNumber ? ` &middot; Account: ${esc(settings.accountNumber)}` : ""}
       </div>
     </div>
     ` : ""}

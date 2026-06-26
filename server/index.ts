@@ -44,7 +44,7 @@ app.use(
       tableName: "session",
       createTableIfMissing: true,
     }),
-    secret: process.env.SESSION_SECRET || "inflow-secret-key",
+    secret: process.env.SESSION_SECRET || (() => { throw new Error("SESSION_SECRET environment variable must be set"); })(),
     resave: false,
     saveUninitialized: false,
     proxy: true,
@@ -97,7 +97,6 @@ app.use((req, res, next) => {
 async function runMigrations() {
   const client = await pgPool.connect();
   try {
-    // Create users table if it doesn't exist
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -112,27 +111,87 @@ async function runMigrations() {
       );
     `);
 
-    // Add user_id to clients if missing
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR REFERENCES users(id),
+        name VARCHAR NOT NULL,
+        email VARCHAR,
+        company VARCHAR,
+        address TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS invoices (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR REFERENCES users(id),
+        invoice_number VARCHAR NOT NULL,
+        client_id VARCHAR REFERENCES clients(id) ON DELETE SET NULL,
+        status VARCHAR NOT NULL DEFAULT 'draft',
+        issue_date TIMESTAMP,
+        due_date TIMESTAMP,
+        from_name VARCHAR,
+        from_email VARCHAR,
+        from_address TEXT,
+        line_items JSONB NOT NULL DEFAULT '[]',
+        subtotal NUMERIC(12,2) NOT NULL DEFAULT 0,
+        tax_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+        tax_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+        total NUMERIC(12,2) NOT NULL DEFAULT 0,
+        currency VARCHAR NOT NULL DEFAULT 'GBP',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS schedules (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR REFERENCES users(id),
+        invoice_id VARCHAR REFERENCES invoices(id) ON DELETE CASCADE,
+        client_id VARCHAR REFERENCES clients(id) ON DELETE SET NULL,
+        frequency VARCHAR NOT NULL,
+        next_send_date TIMESTAMP,
+        last_sent_date TIMESTAMP,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR UNIQUE REFERENCES users(id),
+        logo_url TEXT,
+        business_name VARCHAR,
+        business_email VARCHAR,
+        business_address TEXT,
+        cc_email1 VARCHAR,
+        cc_email2 VARCHAR,
+        vat_number VARCHAR,
+        bank_name VARCHAR,
+        account_name VARCHAR,
+        sort_code VARCHAR,
+        account_number VARCHAR,
+        invoice_prefix VARCHAR
+      );
+    `);
+
     await client.query(`
       ALTER TABLE clients ADD COLUMN IF NOT EXISTS user_id VARCHAR REFERENCES users(id);
     `);
-
-    // Add user_id to invoices if missing
     await client.query(`
       ALTER TABLE invoices ADD COLUMN IF NOT EXISTS user_id VARCHAR REFERENCES users(id);
     `);
-
-    // Add user_id to schedules if missing
     await client.query(`
       ALTER TABLE schedules ADD COLUMN IF NOT EXISTS user_id VARCHAR REFERENCES users(id);
     `);
-
-    // Add user_id to settings if missing
     await client.query(`
       ALTER TABLE settings ADD COLUMN IF NOT EXISTS user_id VARCHAR REFERENCES users(id) UNIQUE;
     `);
 
-    // Ensure invoice numbers are unique per user (prevents duplicates)
     await client.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS invoices_user_invoice_number_unique
       ON invoices (user_id, invoice_number);
@@ -141,9 +200,10 @@ async function runMigrations() {
     log("Database migration complete", "migrate");
   } catch (err) {
     log(`Migration error: ${err}`, "migrate");
-  } finally {
     client.release();
+    process.exit(1);
   }
+  client.release();
 }
 
 (async () => {

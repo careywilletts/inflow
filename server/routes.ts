@@ -37,7 +37,7 @@ export async function registerRoutes(
   app.post("/api/auth/register", async (req, res) => {
     const { email, password, businessName } = req.body;
     if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
-    if (password.length < 6) return res.status(400).json({ message: "Password must be at least 6 characters" });
+    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) return res.status(400).json({ message: "Password must be at least 8 characters and contain a letter and a number" });
 
     const existing = await storage.getUserByEmail(email);
     if (existing) return res.status(409).json({ message: "An account with this email already exists" });
@@ -105,7 +105,7 @@ export async function registerRoutes(
   app.post("/api/auth/reset-password", async (req, res) => {
     const { token, password } = req.body;
     if (!token || !password) return res.status(400).json({ message: "Token and password are required" });
-    if (password.length < 6) return res.status(400).json({ message: "Password must be at least 6 characters" });
+    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) return res.status(400).json({ message: "Password must be at least 8 characters and contain a letter and a number" });
 
     const user = await storage.getUserByResetToken(token);
     if (!user) return res.status(400).json({ message: "This reset link is invalid or has already been used" });
@@ -172,6 +172,7 @@ export async function registerRoutes(
   app.get("/api/clients/:id", requireAuth, async (req, res) => {
     const client = await storage.getClient(req.params.id);
     if (!client) return res.status(404).json({ message: "Client not found" });
+    if (client.userId !== req.session.userId!) return res.status(403).json({ message: "Forbidden" });
     res.json(client);
   });
 
@@ -183,12 +184,17 @@ export async function registerRoutes(
   });
 
   app.patch("/api/clients/:id", requireAuth, async (req, res) => {
+    const existing = await storage.getClient(req.params.id);
+    if (!existing) return res.status(404).json({ message: "Client not found" });
+    if (existing.userId !== req.session.userId!) return res.status(403).json({ message: "Forbidden" });
     const client = await storage.updateClient(req.params.id, req.body);
-    if (!client) return res.status(404).json({ message: "Client not found" });
     res.json(client);
   });
 
   app.delete("/api/clients/:id", requireAuth, async (req, res) => {
+    const existing = await storage.getClient(req.params.id);
+    if (!existing) return res.status(404).json({ message: "Client not found" });
+    if (existing.userId !== req.session.userId!) return res.status(403).json({ message: "Forbidden" });
     await storage.nullifyClientReferences(req.params.id);
     await storage.deleteClient(req.params.id);
     res.status(204).send();
@@ -223,6 +229,7 @@ export async function registerRoutes(
   app.get("/api/invoices/:id", requireAuth, async (req, res) => {
     const inv = await storage.getInvoice(req.params.id);
     if (!inv) return res.status(404).json({ message: "Invoice not found" });
+    if (inv.userId !== req.session.userId!) return res.status(403).json({ message: "Forbidden" });
     res.json(inv);
   });
 
@@ -235,6 +242,8 @@ export async function registerRoutes(
 
   app.patch("/api/invoices/:id", requireAuth, async (req, res) => {
     const existing = await storage.getInvoice(req.params.id);
+    if (!existing) return res.status(404).json({ message: "Invoice not found" });
+    if (existing.userId !== req.session.userId!) return res.status(403).json({ message: "Forbidden" });
     const body = { ...req.body };
     if (body.issueDate) body.issueDate = new Date(body.issueDate);
     if (body.dueDate) body.dueDate = new Date(body.dueDate);
@@ -260,6 +269,9 @@ export async function registerRoutes(
   });
 
   app.delete("/api/invoices/:id", requireAuth, async (req, res) => {
+    const existing = await storage.getInvoice(req.params.id);
+    if (!existing) return res.status(404).json({ message: "Invoice not found" });
+    if (existing.userId !== req.session.userId!) return res.status(403).json({ message: "Forbidden" });
     await storage.deleteSchedulesByInvoiceId(req.params.id);
     await storage.deleteInvoice(req.params.id);
     res.status(204).send();
@@ -275,6 +287,7 @@ export async function registerRoutes(
   app.get("/api/schedules/:id", requireAuth, async (req, res) => {
     const sched = await storage.getSchedule(req.params.id);
     if (!sched) return res.status(404).json({ message: "Schedule not found" });
+    if (sched.userId !== req.session.userId!) return res.status(403).json({ message: "Forbidden" });
     res.json(sched);
   });
 
@@ -286,15 +299,20 @@ export async function registerRoutes(
   });
 
   app.patch("/api/schedules/:id", requireAuth, async (req, res) => {
+    const existing = await storage.getSchedule(req.params.id);
+    if (!existing) return res.status(404).json({ message: "Schedule not found" });
+    if (existing.userId !== req.session.userId!) return res.status(403).json({ message: "Forbidden" });
     const body = { ...req.body };
     if (body.nextSendDate) body.nextSendDate = new Date(body.nextSendDate);
     if (body.lastSentDate) body.lastSentDate = new Date(body.lastSentDate);
     const sched = await storage.updateSchedule(req.params.id, body);
-    if (!sched) return res.status(404).json({ message: "Schedule not found" });
     res.json(sched);
   });
 
   app.delete("/api/schedules/:id", requireAuth, async (req, res) => {
+    const existing = await storage.getSchedule(req.params.id);
+    if (!existing) return res.status(404).json({ message: "Schedule not found" });
+    if (existing.userId !== req.session.userId!) return res.status(403).json({ message: "Forbidden" });
     await storage.deleteSchedule(req.params.id);
     res.status(204).send();
   });
