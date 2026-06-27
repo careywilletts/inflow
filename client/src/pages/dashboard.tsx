@@ -130,15 +130,6 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Total Revenue"
-          value={formatCurrency(totalRevenue)}
-          icon={PoundSterling}
-          description="From paid invoices"
-          loading={loading}
-          accent="green"
-          href="/invoices?status=paid"
-        />
-        <StatCard
           title="Pending"
           value={formatCurrency(pendingAmount)}
           icon={TrendingUp}
@@ -146,6 +137,15 @@ export default function Dashboard() {
           loading={loading}
           accent="pink"
           href="/invoices?status=sent"
+        />
+        <StatCard
+          title="Total Revenue"
+          value={formatCurrency(totalRevenue)}
+          icon={PoundSterling}
+          description="From paid invoices"
+          loading={loading}
+          accent="green"
+          href="/invoices?status=paid"
         />
         <StatCard
           title="Total Clients"
