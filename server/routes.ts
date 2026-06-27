@@ -2,10 +2,13 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import { storage } from "./storage";
 import { insertClientSchema, insertInvoiceSchema, insertScheduleSchema, insertSettingsSchema } from "@shared/schema";
 import multer from "multer";
 import { sendInvoiceEmail, sendVerificationEmail, sendPasswordResetEmail } from "./email";
+
+const JWT_SECRET = process.env.SESSION_SECRET || "inflow-secret-key";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -21,6 +24,19 @@ const upload = multer({
 });
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
+  // Check JWT token from Authorization header (mobile app)
+  const authHeader = req.headers["authorization"];
+  if (authHeader?.startsWith("Bearer ")) {
+    try {
+      const token = authHeader.slice(7);
+      const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
+      req.session.userId = payload.userId;
+      return next();
+    } catch {
+      return res.status(401).json({ message: "Unauthorised" });
+    }
+  }
+  // Fall back to session (web app)
   if (!req.session?.userId) {
     return res.status(401).json({ message: "Unauthorised" });
   }
@@ -64,8 +80,9 @@ export async function registerRoutes(
     );
 
     req.session.userId = user.id;
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "90d" });
     req.session.save(() => {
-      res.status(201).json({ id: user.id, email: user.email, emailVerified: false });
+      res.status(201).json({ id: user.id, email: user.email, emailVerified: false, token });
     });
   });
 
@@ -144,8 +161,9 @@ export async function registerRoutes(
     if (!valid) return res.status(401).json({ message: "Invalid email or password" });
 
     req.session.userId = user.id;
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "90d" });
     req.session.save(() => {
-      res.json({ id: user.id, email: user.email, emailVerified: user.emailVerified });
+      res.json({ id: user.id, email: user.email, emailVerified: user.emailVerified, token });
     });
   });
 
